@@ -1,3 +1,6 @@
+import numpy as np
+import cv2
+
 CANNY_THRESHOLD1 = 100
 CANNY_THRESHOLD2 = 200
 HOUGH_RHO = 1

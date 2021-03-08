@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from bisect import bisect
-from .recognizer_consts add *
+from .recognizer_consts import *
 
 class Recognizer:
     def __init__(self):
