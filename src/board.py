@@ -34,7 +34,15 @@ class Board:
             local_x = round((global_x - min_x)/self.cell_size)
             local_y = round((global_y - min_y)/self.cell_size)
             self.black_stones.append(Stone(local_x, local_y, global_x, global_y))
+            
+    def get_white_coordinates(self):
+        for stone in self.white_stones:
+            print(stone.local_x, stone.local_y)
     
+    def get_black_coordinates(self):
+        for stone in self.black_stones:
+            print(stone.local_x, stone.local_y)
+            
     def to_RGB(self, image):
         return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
