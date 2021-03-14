@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from bisect import bisect
-from .recognizer_consts import *
+from recognizer_consts import *
 
 class Recognizer:
     def __init__(self):
@@ -20,40 +20,30 @@ class Recognizer:
         return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     
     def get_edges(self, img_gray):
-        CANNY_THRESHOLD1 = 100
-        CANNY_THRESHOLD2 = 200
+        #CANNY_THRESHOLD1 = 100
+        #CANNY_THRESHOLD2 = 200
         return cv2.Canny(img_gray, CANNY_THRESHOLD1, CANNY_THRESHOLD2)
     
-    def all_lines(self, img_gray):
-        CANNY_THRESHOLD1 = 100
-        CANNY_THRESHOLD2 = 200
+    def all_lines(self, img_gray, hough_threshold):
         HOUGH_RHO = 1
-        HOUGH_THETA = np.pi/180
-        HOUGH_THRESHOLD = 100
-        edges = cv2.Canny(img_gray, CANNY_THRESHOLD1, CANNY_THRESHOLD2)
-        size = min(img_gray.shape[0:2]) 
-        lines = cv2.HoughLinesP(edges, rho=HOUGH_RHO, theta=HOUGH_THETA, threshold=HOUGH_THRESHOLD,
-                                minLineLength=size/2, maxLineGap=size)
+        HOUGH_THETA = np.pi / 180
+
+        edges = self.get_edges(img_gray)
+        size = min(img_gray.shape[0:2])
+        lines = cv2.HoughLinesP(edges, rho=HOUGH_RHO, theta=HOUGH_THETA, threshold=hough_threshold,
+                                minLineLength=size / 2, maxLineGap=size)  ### ?
+        if lines is None:
+            return None
         return np.reshape(lines, (lines.shape[0], lines.shape[2]))
     
     def get_verticals_horizontals(self, img_gray, hough_threshold):
-        CANNY_THRESHOLD1 = 100
-        CANNY_THRESHOLD2 = 200
-        HOUGH_RHO = 1
-        HOUGH_THETA = np.pi/180
-        HOUGH_HIGH_THRESHOLD = 50
-        HOUGH_LOW_THRESHOLD = 50
-        VERTICAL_TAN_MIN = 50
-        HORIZONTAL_TAN_MAX = 0.02
+        #VERTICAL_TAN_MIN = 50
+        #HORIZONTAL_TAN_MAX = 0.02
 
         # Find all lines
-        edges = cv2.Canny(img_gray, CANNY_THRESHOLD1, CANNY_THRESHOLD2)
-        size = min(img_gray.shape[0:2]) 
-        lines = cv2.HoughLinesP(edges, rho=HOUGH_RHO, theta=HOUGH_THETA, threshold=hough_threshold,
-                                minLineLength=size/2, maxLineGap=size/2) #???
+        lines = self.all_lines(img_gray, hough_threshold)
         if (lines is None):
             return [], []
-        lines = np.reshape(lines, (lines.shape[0], lines.shape[2]))
         # Divide the lines into verticals and horizontals
         v_lines = []
         h_lines = []
@@ -62,7 +52,7 @@ class Recognizer:
             if (x1 == x2):
                 v_lines.append(line)
             else:
-                slope = (y2 - y1)/(x2 - x1)
+                slope = (y2 - y1) / (x2 - x1)
                 if (abs(slope) > VERTICAL_TAN_MIN):
                     v_lines.append(line)
                 elif (abs(slope) < HORIZONTAL_TAN_MAX):
@@ -74,7 +64,7 @@ class Recognizer:
     
     def merge_lines(self, lines, is_vertical):
         # ???
-        MIN_DIST = 10
+        #MIN_DIST = 10
 
         close_groups = []
         grouped = set() 
@@ -111,15 +101,16 @@ class Recognizer:
             return np.array(sorted(merged_lines, key=lambda line:line[1]))
     
     def lines_recognition(self, img_gray):
-        HOUGH_LOW_THRESHOLD = 50
-        HOUGH_HIGH_THRESHOLD = 200
-        MIN_DIST_COEFF = 0.7
-        MIN_GAP_COEFF = 1.5
+        #HOUGH_LOW_THRESHOLD = 50
+        #HOUGH_HIGH_THRESHOLD = 200
+        #MIN_DIST_COEFF = 0.7
+        #MIN_GAP_COEFF = 1.5
 
         clear_v_lines, clear_h_lines = [], []
+        hough_thresold = HOUGH_HIGH_THRESHOLD
         while (len(clear_v_lines) < 2) or (len(clear_h_lines) < 2):
-            clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, HOUGH_HIGH_THRESHOLD)
-            HOUGH_HIGH_THRESHOLD -= 10
+            clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, hough_thresold)
+            hough_thresold -= 10
         cell_size = min(np.amin(np.diff(clear_v_lines[:, 0])), np.amin(np.diff(clear_h_lines[:, 1])))
         unclear_v_lines, unclear_h_lines = self.get_verticals_horizontals(img_gray, HOUGH_LOW_THRESHOLD)
         # Filter unclear lines
@@ -127,8 +118,8 @@ class Recognizer:
         h_lines = [clear_h_lines[0]]
         ind = bisect(unclear_v_lines[:, 0], clear_v_lines[0][0])
         for i in range(ind - 1, -1, -1):
-            dist_coeff = (v_lines[-1][0] - unclear_v_lines[i][0])/cell_size
-            if dist_coeff > MIN_DIST_COEFF:
+            dist_coeff = (v_lines[-1][0] - unclear_v_lines[i][0]) / cell_size
+            if dist_coeff > MIN_LINES_DIST_COEFF:
                 if dist_coeff > MIN_GAP_COEFF:
                     x = (unclear_v_lines[i][0] + v_lines[-1][0]) // 2
                     new_v_line = [x, v_lines[-1][1], x, v_lines[-1][3]]
@@ -136,8 +127,8 @@ class Recognizer:
                 v_lines.append(unclear_v_lines[i])
         v_lines.reverse()
         for i in range(ind, len(unclear_v_lines)):
-            dist_coeff = (unclear_v_lines[i][0] - v_lines[-1][0])/cell_size
-            if dist_coeff > MIN_DIST_COEFF:
+            dist_coeff = (unclear_v_lines[i][0] - v_lines[-1][0]) / cell_size
+            if dist_coeff > MIN_LINES_DIST_COEFF:
                 if dist_coeff > MIN_GAP_COEFF:
                     x = (unclear_v_lines[i][0] + v_lines[-1][0]) // 2
                     new_v_line = [x, v_lines[-1][1], x, v_lines[-1][3]]
@@ -145,8 +136,8 @@ class Recognizer:
                 v_lines.append(unclear_v_lines[i])
         ind = bisect(unclear_h_lines[:, 1], clear_h_lines[0][1])
         for i in range(ind - 1, -1, -1):
-            dist_coeff = (h_lines[-1][1] - unclear_h_lines[i][1])/cell_size
-            if dist_coeff > MIN_DIST_COEFF:
+            dist_coeff = (h_lines[-1][1] - unclear_h_lines[i][1]) / cell_size
+            if dist_coeff > MIN_LINES_DIST_COEFF:
                 if dist_coeff > MIN_GAP_COEFF:
                     y = (unclear_h_lines[i][1] + h_lines[-1][1]) // 2
                     new_h_line = [h_lines[-1][0], y, h_lines[-1][2], y]
@@ -154,8 +145,8 @@ class Recognizer:
                 h_lines.append(unclear_h_lines[i])
         h_lines.reverse()
         for i in range(ind, len(unclear_h_lines)):
-            dist_coeff = (unclear_h_lines[i][1] - h_lines[-1][1])/cell_size
-            if dist_coeff > MIN_DIST_COEFF:
+            dist_coeff = (unclear_h_lines[i][1] - h_lines[-1][1]) / cell_size
+            if dist_coeff > MIN_LINES_DIST_COEFF:
                 if dist_coeff > MIN_GAP_COEFF:
                     y = (unclear_h_lines[i][1] + h_lines[-1][1]) // 2
                     new_h_line = [h_lines[-1][0], y, h_lines[-1][2], y]
@@ -169,35 +160,25 @@ class Recognizer:
     
     def find_intersections(self, v_lines, h_lines):
         return np.array(np.meshgrid(v_lines[:, 0], h_lines[:, 1])).T.reshape(-1, 2)
-    
-    def find_circles(self, img_gray, cell_size, intersections):
-        METHOD = cv2.HOUGH_GRADIENT
-        DP = 2
-        PARAM1 = 200
-        PARAM2 = 20
-        MIN_DIST_COEFF = 0.9
-        MAX_R_COEFF = 0.5
-        MIN_R_COEFF = 0.5
+
+    def find_circles(self, img_gray, cell_size):
+        #METHOD = cv2.HOUGH_GRADIENT
+        #DP = 2
+        #PARAM1 = 200
+        #PARAM2 = 15
+        #MIN_DIST_COEFF = 0.9
+        #MAX_R_COEFF = 0.5
+        #MIN_R_COEFF = 0.5
 
         return cv2.HoughCircles(img_gray, method=METHOD, dp=DP,
-                                   minDist=round(cell_size * MIN_DIST_COEFF),
-                                   param1=PARAM1, param2=PARAM2, minRadius=round(cell_size * MIN_R_COEFF),
-                                   maxRadius=round(cell_size * MAX_R_COEFF))[0, :]
-    
-    def stones_recognition(self, img_gray, cell_size, intersections):
-        METHOD = cv2.HOUGH_GRADIENT
-        DP = 2
-        PARAM1 = 200
-        PARAM2 = 15
-        MIN_DIST_COEFF = 0.9
-        MAX_R_COEFF = 0.5
-        MIN_R_COEFF = 0.5
-        MIN_INTERSECTION_DIST_COEFF = 0.3
+                                minDist=round(cell_size * MIN_DIST_COEFF),
+                                param1=PARAM1, param2=PARAM2, minRadius=round(cell_size * MIN_R_COEFF),
+                                maxRadius=round(cell_size * MAX_R_COEFF))[0, :]
 
-        circles = cv2.HoughCircles(img_gray, method=METHOD, dp=DP,
-                                   minDist=round(cell_size * MIN_DIST_COEFF),
-                                   param1=PARAM1, param2=PARAM2, minRadius=round(cell_size * MIN_R_COEFF),
-                                   maxRadius=round(cell_size * MAX_R_COEFF))[0, :]
+    def stones_recognition(self, img_gray, cell_size, intersections):
+        #MIN_INTERSECTION_DIST_COEFF = 0.3
+
+        circles = self.find_circles(img_gray, cell_size)
         # Filter circles
         stones = []
         radii = []
@@ -213,7 +194,8 @@ class Recognizer:
         return stones, round(np.mean(radii))
     
     def colorize(self, img_gray, stones, radius):
-        WHITE_THRESHOLD = 255/2
+        #WHITE_THRESHOLD = 255/2
+
         white_stones = []
         black_stones = []
         for stone in stones:
