@@ -1,0 +1,4 @@
+matplotlib
+opencv-python==4.3.0.36
+sgfmill
+pyqt5
