@@ -13,30 +13,6 @@ from src.board import Board
 from src.recognizer import Recognizer
 
 
-def recognise_image(img_file):
-    """
-    Recognises board in img_file and (over)writes a .sgf file
-    in the same directory.
-    :param img_file: Path to (png, jpg) file
-    """
-
-    with open(img_file, "rb") as f:
-        chunk = f.read()
-        chunk_arr = np.frombuffer(chunk, dtype=np.uint8)
-
-    img = cv2.imdecode(chunk_arr, cv2.IMREAD_COLOR)
-    rec = Recognizer()
-    boards_img = rec.split_into_boards(img)
-
-    i = 1
-    for board_img in boards_img:
-        board = Board(board_img)
-        index = img_file.rfind('.')
-        sgf_file = '{}.{}.sgf'.format(img_file[:index], str(i))
-        board.save_sgf(sgf_file)
-        i += 1
-
-
 class RecognitionWorker(QThread):
     update_ui = QtCore.pyqtSignal(int, str)
 
@@ -44,10 +20,11 @@ class RecognitionWorker(QThread):
         super(QObject, self).__init__()
         self.files = files
         self.files_done = 0
+        self.subprogress = 0
 
     def send_update(self, line):
         """ Notifies MainWindow to update progress bar and append line to the log """
-        percent = int(100 * self.files_done / len(self.files))
+        percent = int(100 * (self.files_done + self.subprogress) / len(self.files))
         self.update_ui.emit(percent, line)
 
     def run(self):
@@ -67,13 +44,42 @@ class RecognitionWorker(QThread):
             self.send_update('Processing {}'.format(img_file))
 
             try:
-                recognise_image(img_file)
+                with open(img_file, "rb") as f:
+                    chunk = f.read()
+                    chunk_arr = np.frombuffer(chunk, dtype=np.uint8)
+
+                self.parse_img(img_file, chunk_arr)
                 output = 'Converted successfully'
             except Exception as ex:
                 output = 'An error occurred <<{}>>'.format(str(ex))
 
+            self.subprogress = 0
             self.files_done += 1
             self.send_update(output + '\n')
+
+    def parse_img(self, img_path, img_bytes):
+        # Create dir
+        index = img_path.rfind('.')
+        path_dir = img_path[:index]
+        os.makedirs(path_dir, exist_ok=True)
+
+        img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
+        rec = Recognizer()
+        boards_img = rec.split_into_boards(img)
+
+        total_boards = len(boards_img)
+        self.subprogress = 1 / (total_boards + 1)
+        self.send_update('> Found {} board(s)'.format(total_boards))
+
+        i = 1
+        for board_img in boards_img:
+            board = Board(board_img)
+            sgf_file = 'board-{}.sgf'.format(str(i))
+            board.save_sgf(os.path.join(path_dir, sgf_file))
+
+            self.subprogress = (i + 1) / (total_boards + 1)
+            self.send_update('> Board {} saved'.format(i))
+            i += 1
 
 
 # Loads window layout
