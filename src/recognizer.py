@@ -10,9 +10,10 @@ class Recognizer:
     def recognize(self, img):
         img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         v_lines, h_lines = self.lines_recognition(img_gray)
+        x_size, y_size = h_lines.shape[0], v_lines.shape[0]
         intersections = self.find_intersections(v_lines, h_lines)
+        edges = self.find_edges(v_lines, h_lines)
         cell_size = self.get_cell_size(v_lines, h_lines)
-        edges = self.find_edges(v_lines, h_lines, cell_size)
         stones, radius = self.stones_recognition(img_gray, cell_size, intersections)
         white_stones, black_stones = self.colorize(img_gray, stones, radius)
         return intersections, white_stones, black_stones, radius, x_size, y_size, edges
