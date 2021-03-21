@@ -221,7 +221,7 @@ class Recognizer:
         #MIN_INTERSECTION_DIST_COEFF = 0.3
 
         all_circles = []
-        param2_grid = np.linspace(15, 30, 3)
+        param2_grid = np.linspace(5, 30, 5)
         min_dist_coeff_grid = np.linspace(0.9, 1, 2)
         min_r_coeff_grid = np.linspace(0.35, 0.45, 3)
         max_r_coeff_grid = np.linspace(0.5, 0.55, 2)
