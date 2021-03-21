@@ -48,6 +48,7 @@ class RecognitionWorker(QThread):
             extension = os.path.splitext(img_file)[1]
             if not extension in ['.png', '.jpg']:
                 self.files_done += 1
+                self.send_update('')  # Do not log skipped files
                 continue
 
             self.send_update('Processing {}'.format(img_file))
@@ -90,8 +91,10 @@ class MainWindow(Window):
 
     def update_progress_bar(self, percent, output):
         self.findChild(QtWidgets.QProgressBar, "progress_bar").setValue(percent)
-        self.findChild(QtWidgets.QPlainTextEdit, "console_output").appendPlainText(output)
-        print(output)
+
+        if output:
+            self.findChild(QtWidgets.QPlainTextEdit, "console_output").appendPlainText(output)
+            print(output)
 
     def set_selected_files(self, files):
         self.selected_files = files
