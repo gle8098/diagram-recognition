@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from .stone import Stone
 from .recognizer import Recognizer
 import copy
-from sgfmill import sgf
+from sgfmill import sgf, boards, sgf_moves
 
 class Board:
     def __init__(self, img):
@@ -96,14 +96,15 @@ class Board:
         
         game = sgf.Sgf_game(self.board_size)
         
+        board = boards.Board(self.board_size)
+        
         for stone in self.white_stones:
             x = self.board_size-stone.local_y-1
             y = stone.local_x
             if (x < 0) or (x >= self.board_size) or (y < 0) or (y >= self.board_size):
                 print('Coordinate error')
                 continue
-            node = game.extend_main_sequence()
-            node.set_move('w', (x, y))
+            board.play(x, y, 'w')
             
         for stone in self.black_stones:
             x = self.board_size-stone.local_y-1
@@ -111,12 +112,10 @@ class Board:
             if (x < 0) or (x >= self.board_size) or (y < 0) or (y >= self.board_size):
                 print('Coordinate error')
                 continue
-            node = game.extend_main_sequence()
-            node.set_move('b', (x, y))
+            board.play(x, y, 'b')
         
+        sgf_moves.set_initial_position(game, board)
         game_bytes = game.serialise()
-        game_bytes = game_bytes.replace(b'W', b'AW')
-        game_bytes = game_bytes.replace(b'B', b'AB')
             
         with open(path, "wb") as f:
             f.write(game_bytes)
