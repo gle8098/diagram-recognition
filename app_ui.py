@@ -10,6 +10,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QFileDialog, QApplication
 
 from src.board import Board
+from src.recognizer import Recognizer
 
 
 def recognise_image(img_file):
@@ -24,10 +25,16 @@ def recognise_image(img_file):
         chunk_arr = np.frombuffer(chunk, dtype=np.uint8)
 
     img = cv2.imdecode(chunk_arr, cv2.IMREAD_COLOR)
-    board = Board(img)
-    index = img_file.rfind('.')
-    sgf_file = img_file[:index + 1] + 'sgf'
-    board.save_sgf(sgf_file)
+    rec = Recognizer()
+    boards_img = rec.split_into_boards(img)
+
+    i = 1
+    for board_img in boards_img:
+        board = Board(board_img)
+        index = img_file.rfind('.')
+        sgf_file = '{}.{}.sgf'.format(img_file[:index + 1], str(i))
+        board.save_sgf(sgf_file)
+        i += 1
 
 
 class RecognitionWorker(QThread):
