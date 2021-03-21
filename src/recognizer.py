@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from bisect import bisect
-from .recognizer_consts import *
+from src.recognizer_consts import *
 
 class Recognizer:
     def __init__(self):
@@ -300,5 +300,5 @@ class Recognizer:
                 board_img = (page_img_gray[intersections[i][j][1] + 10:intersections[i + 1][j + 1][1] + 10,
                                            intersections[i][j][0] + 10:intersections[i + 1][j + 1][0] + 10])
                 board_images.append(board_img)
-        return np.array(board_images, dtype=object)
+        return board_images
 
