@@ -15,7 +15,7 @@ class Recognizer:
         edges = self.find_edges(v_lines, h_lines, cell_size)
         stones, radius = self.stones_recognition(img_gray, cell_size, intersections)
         white_stones, black_stones = self.colorize(img_gray, stones, radius)
-        return intersections, cell_size, white_stones, black_stones, radius, edges
+        return intersections, white_stones, black_stones, radius, x_size, y_size, edges
         
     def to_RGB(self, image):
         return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
