@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from bisect import bisect
-from recognizer_consts import *
+from src.recognizer_consts import *
 
 class Recognizer:
     def __init__(self):
@@ -238,14 +238,11 @@ class Recognizer:
         stones = []
         radii = []
         for circle in circles:
-            in_intersection = False
             for intersection in np.reshape(intersections, (-1, 2)):
-                if (np.linalg.norm(circle[:2] - intersection) <= MIN_INTERSECTION_DIST_COEFF * cell_size):
-                    in_intersection = True
+                if np.linalg.norm(circle[:2] - intersection) <= MIN_INTERSECTION_DIST_COEFF * cell_size:
+                    stones.append(intersection)
+                    radii.append(circle[2])
                     break
-            if in_intersection:
-                stones.append(intersection)
-                radii.append(circle[2])
         return np.unique(stones, axis=0), round(np.mean(radii))
     
     def colorize(self, img_gray, stones, radius):
@@ -303,5 +300,5 @@ class Recognizer:
                 board_img = (page_img_gray[intersections[i][j][1] + 10:intersections[i + 1][j + 1][1] + 10,
                                            intersections[i][j][0] + 10:intersections[i + 1][j + 1][0] + 10])
                 board_images.append(board_img)
-        return np.array(board_images, dtype=object)
+        return board_images
 
