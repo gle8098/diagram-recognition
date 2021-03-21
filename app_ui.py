@@ -3,6 +3,7 @@ import sys
 import cv2
 import os
 
+import numpy as np
 from PyQt5 import uic, QtCore
 from PyQt5.QtCore import QObject, QThread
 from PyQt5 import QtWidgets
@@ -17,7 +18,12 @@ def recognise_image(img_file):
     in the same directory.
     :param img_file: Path to (png, jpg) file
     """
-    img = cv2.imread(img_file)
+
+    with open(img_file, "rb") as f:
+        chunk = f.read()
+        chunk_arr = np.frombuffer(chunk, dtype=np.uint8)
+
+    img = cv2.imdecode(chunk_arr, cv2.IMREAD_COLOR)
     board = Board(img)
     index = img_file.rfind('.')
     sgf_file = img_file[:index + 1] + 'sgf'
