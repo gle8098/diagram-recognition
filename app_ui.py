@@ -32,7 +32,7 @@ def recognise_image(img_file):
     for board_img in boards_img:
         board = Board(board_img)
         index = img_file.rfind('.')
-        sgf_file = '{}.{}.sgf'.format(img_file[:index + 1], str(i))
+        sgf_file = '{}.{}.sgf'.format(img_file[:index], str(i))
         board.save_sgf(sgf_file)
         i += 1
 

@@ -13,10 +13,10 @@ class Board:
         recognizer = Recognizer()
         debug = True
         if debug:
-            self.intersections, white_stones, black_stones, self.radius, x_size, y_size, edges = recognizer.recognize(img=img)
+            self.intersections, white_stones, black_stones, self.radius, x_size, y_size, edges = recognizer.recognize(img)
         else:
             try:
-                self.intersections, white_stones, black_stones, self.radius, x_size, y_size, edges = recognizer.recognize(img=img)
+                self.intersections, white_stones, black_stones, self.radius, x_size, y_size, edges = recognizer.recognize(img)
             except:
                 return
         self.img = img
