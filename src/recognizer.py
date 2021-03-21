@@ -1,14 +1,13 @@
 import cv2
 import numpy as np
 from bisect import bisect
-from .recognizer_consts import *
+from recognizer_consts import *
 
 class Recognizer:
     def __init__(self):
         pass
         
-    def recognize(self, img):
-        img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    def recognize(self, img_gray):
         v_lines, h_lines = self.lines_recognition(img_gray)
         x_size, y_size = h_lines.shape[0], v_lines.shape[0]
         intersections = self.find_intersections(v_lines, h_lines)
@@ -290,9 +289,10 @@ class Recognizer:
         split_lines.append(split_line)
         return np.array(split_lines)
 
-    def split_into_boards(self, page_img_gray):
+    def split_into_boards(self, page_img):
         HOUGH_THRESHOLD = 200
 
+        page_img_gray = cv2.cvtColor(page_img, cv2.COLOR_BGR2GRAY)
         v_lines, h_lines = self.get_verticals_horizontals(page_img_gray[10:, 10:], HOUGH_THRESHOLD)
         v_lines = self.get_split_lines(v_lines, True)
         h_lines = self.get_split_lines(h_lines, False)
@@ -301,7 +301,7 @@ class Recognizer:
         for i in range(intersections.shape[0] - 1):
             for j in range(intersections.shape[1] - 1):
                 board_img = (page_img_gray[intersections[i][j][1] + 10:intersections[i + 1][j + 1][1] + 10,
-                             intersections[i][j][0] + 10:intersections[i + 1][j + 1][0] + 10])
+                                           intersections[i][j][0] + 10:intersections[i + 1][j + 1][0] + 10])
                 board_images.append(board_img)
         return np.array(board_images, dtype=object)
 
