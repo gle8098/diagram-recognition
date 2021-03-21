@@ -62,7 +62,7 @@ class Board:
     def find_stone_in_intersections(self, stone):
         for i in range(self.intersections.shape[0]):
             for j in range(self.intersections.shape[1]):
-                if self.intersections[i][j][0] == stone[0] and self.intersections[i][j][1] == stone[1]:
+                if np.array_equal(self.intersections[i][j], stone):
                     return i, j
 
     def visualize(self):
