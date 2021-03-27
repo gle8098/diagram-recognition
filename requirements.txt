@@ -1,4 +1,4 @@
 matplotlib
-opencv-python==4.3.0.36
+opencv-python-headless
 sgfmill
 pyqt5
