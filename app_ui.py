@@ -12,6 +12,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QFileDialog, QApplication, QMainWindow, QVBoxLayout, QLabel, QWidget, QScrollArea
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
 
 from src.board import Board
 from src.recognizer import Recognizer
@@ -54,7 +55,7 @@ class RecognitionWorker(QThread):
                     chunk = f.read()
                     chunk_arr = np.frombuffer(chunk, dtype=np.uint8)
 
-                paths = self.parse_img(img_file, chunk_arr)
+                paths, boards_img = self.parse_img(img_file, chunk_arr)
                 output = 'Converted successfully'
 
             except Exception as ex:
@@ -90,7 +91,7 @@ class RecognitionWorker(QThread):
             self.subprogress = (i + 1) / (total_boards + 1)
             self.send_update('> Board {} saved'.format(i))
             i += 1
-        return paths
+        return paths, boards_img
 
 
 # Loads window layout
@@ -104,7 +105,7 @@ class MainWindow(Window):
         self.selected_files = tuple()
         self.recognition_worker = None
 
-        self.w = PreviewWindow()
+        self.w = None
 
     def select_files(self):
         type_filter = "PNG (*.png);;JPEG (*.jpg)"
@@ -142,68 +143,39 @@ class MainWindow(Window):
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
 
     def show_preview(self):
+        self.w = None
         # paths = 'data/images/d_3/board-1.sgf'
         paths = 'data/images/pages/chinese/1000_TsumeGo-10/*'
         paths = glob.glob(paths)
-        # self.w.show()
-        self.w.show_preview_image(paths)
-
-
-class MplCanvas(FigureCanvasQTAgg):
-    def __init__(self, paths, parent=None, width=8, height=8, dpi=100):
         n_boards = len(paths)
-        fig = plt.Figure(figsize=(8, n_boards * 8), dpi=dpi)
+        fig = plt.Figure(figsize=(4, n_boards * 4))#, dpi=100)
         for i in range(n_boards):
             path = paths[i]
             visualizer = Visualizer(path)
             visualizer.draw_board(fig=fig, n_boards=n_boards, current_index=i + 1)
-        super(MplCanvas, self).__init__(fig)
+        self.w = ScrollableWindow(fig)
 
 
-class PreviewWindow(QMainWindow):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class ScrollableWindow(QMainWindow):
+    def __init__(self, fig):
+        self.qapp = QtWidgets.QApplication([])
 
-        # layout = QtWidgets.QHBoxLayout(self.scrollAreaWidgetContents)
+        QtWidgets.QMainWindow.__init__(self)
+        self.widget = QtWidgets.QWidget()
+        self.setCentralWidget(self.widget)
+        self.widget.setLayout(QtWidgets.QVBoxLayout())
+        self.widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.widget.layout().setSpacing(0)
 
-    def show_preview_image(self, paths):
-        # path = 'data/images/d_3/board-1.sgf'
-        sc = MplCanvas(paths=paths, parent=self, width=8, height=8, dpi=100)
+        self.fig = fig
+        self.canvas = FigureCanvasQTAgg(self.fig)
+        self.canvas.draw()
+        self.scroll = QtWidgets.QScrollArea(self.widget)
+        self.scroll.setWidget(self.canvas)
 
-        # self.setCentralWidget(sc)
-
-        # layout = QtWidgets.QVBoxLayout(self.centralWidget())
-        # self.scrollArea = QtWidgets.QScrollArea(self.centralWidget())
-        # layout.addWidget(self.scrollArea)
-        # self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        # self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1112, 932))
-        # self.scrollArea.setWidget(self.scrollAreaWidgetContents)
-
-        self.scroll = QScrollArea()
-        self.widget = QWidget()
-        self.vbox = QVBoxLayout()
-
-        self.vbox.addWidget(sc)
-        #
-        # for i in range(1, 50):
-        #     object = QLabel("Test")
-        #     self.vbox.addWidget(object)
-
-        self.widget.setLayout(self.vbox)
-
-        # Scroll Area Properties
-        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.scroll.setWidgetResizable(True)
-        self.scroll.setWidget(self.widget)
-
-        self.setCentralWidget(self.scroll)
-
-        self.setGeometry(600, 100, 1000, 900)
-        self.setWindowTitle('Scroll Area Demonstration')
-
-        # self.setCentralWidget(sc)
-
+        self.nav = NavigationToolbar2QT(self.canvas, self.widget)
+        self.widget.layout().addWidget(self.nav)
+        self.widget.layout().addWidget(self.scroll)
         self.show()
 
 

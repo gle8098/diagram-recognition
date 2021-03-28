@@ -11,14 +11,13 @@ class Visualizer:
 
     def draw_board(self, img=None, fig=None, n_boards = 1, current_index = 1):
         board_size = self.game.get_size()
-
+        # fig.patch.set_facecolor((1, 1, .8))
         if img is not None:
             if fig is None:
                 fig = plt.figure(figsize=[16, 8])
-            # fig.patch.set_facecolor((1, 1, .8))
 
             ax1 = fig.add_subplot(1, 2, 2)
-            # fig.subplot(1, 2, 2)
+
             for x in range(board_size):
                 ax1.plot([x, x], [0, board_size - 1], 'k')
             for y in range(board_size):
@@ -86,7 +85,7 @@ class Visualizer:
             white_stones = pos[1]
             black_stones = pos[0]
 
-            markersize = 300 / (board_size + 1)
+            markersize = 150 / (board_size + 1)
             for stone in white_stones:
                 y = stone[0]
                 x = stone[1]
