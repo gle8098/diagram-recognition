@@ -1,5 +1,7 @@
 import glob
 import sys
+from random import randint
+
 import cv2
 import os
 
@@ -7,10 +9,14 @@ import numpy as np
 from PyQt5 import uic, QtCore
 from PyQt5.QtCore import QObject, QThread
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QFileDialog, QApplication
+from PyQt5.QtWidgets import QFileDialog, QApplication, QMainWindow, QVBoxLayout, QLabel, QWidget
+from matplotlib import pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
 from src.board import Board
 from src.recognizer import Recognizer
+
+from src.visualizer import Visualizer
 
 
 class RecognitionWorker(QThread):
@@ -93,6 +99,8 @@ class MainWindow(Window):
         self.selected_files = tuple()
         self.recognition_worker = None
 
+        self.w = PreviewWindow()
+
     def select_files(self):
         type_filter = "PNG (*.png);;JPEG (*.jpg)"
         dialog = QFileDialog()
@@ -127,6 +135,32 @@ class MainWindow(Window):
         else:
             line = '{} файлов выбрано'
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
+
+    def show_preview(self):
+        paths = ['data/images/d_3/board-1.sgf']
+        # self.w.show()
+        self.w.show_preview_image(paths)
+
+
+class MplCanvas(FigureCanvasQTAgg):
+    def __init__(self, path, parent=None, width=8, height=8, dpi=100):
+        fig = plt.Figure(figsize=(width, height), dpi=dpi)
+        visualizer = Visualizer(path)
+        visualizer.draw_board(fig=fig)
+        super(MplCanvas, self).__init__(fig)
+
+
+class PreviewWindow(QMainWindow):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def show_preview_image(self, paths):
+        path = 'data/images/d_3/board-1.sgf'
+        sc = MplCanvas(path=path, parent=self, width=8, height=8, dpi=100,)
+
+        self.setCentralWidget(sc)
+
+        self.show()
 
 
 if __name__ == '__main__':
