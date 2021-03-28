@@ -137,16 +137,21 @@ class MainWindow(Window):
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
 
     def show_preview(self):
-        paths = ['data/images/d_3/board-1.sgf']
+        # paths = 'data/images/d_3/board-1.sgf'
+        paths = 'data/images/pages/chinese/1000_TsumeGo-10/*'
+        paths = glob.glob(paths)
         # self.w.show()
         self.w.show_preview_image(paths)
 
 
 class MplCanvas(FigureCanvasQTAgg):
-    def __init__(self, path, parent=None, width=8, height=8, dpi=100):
-        fig = plt.Figure(figsize=(width, height), dpi=dpi)
-        visualizer = Visualizer(path)
-        visualizer.draw_board(fig=fig)
+    def __init__(self, paths, parent=None, width=8, height=8, dpi=100):
+        n_boards = len(paths)
+        fig = plt.Figure(figsize=(8, n_boards*8), dpi=dpi)
+        for i in range(n_boards):
+            path = paths[i]
+            visualizer = Visualizer(path)
+            visualizer.draw_board(fig=fig, n_boards=n_boards, current_index=i+1)
         super(MplCanvas, self).__init__(fig)
 
 
@@ -155,8 +160,8 @@ class PreviewWindow(QMainWindow):
         super().__init__(*args, **kwargs)
 
     def show_preview_image(self, paths):
-        path = 'data/images/d_3/board-1.sgf'
-        sc = MplCanvas(path=path, parent=self, width=8, height=8, dpi=100,)
+        # path = 'data/images/d_3/board-1.sgf'
+        sc = MplCanvas(paths=paths, parent=self, width=8, height=8, dpi=100)
 
         self.setCentralWidget(sc)
 
