@@ -7,9 +7,9 @@ import os
 
 import numpy as np
 from PyQt5 import uic, QtCore
-from PyQt5.QtCore import QObject, QThread
+from PyQt5.QtCore import QObject, QThread, Qt
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QFileDialog, QApplication, QMainWindow, QVBoxLayout, QLabel, QWidget
+from PyQt5.QtWidgets import QFileDialog, QApplication, QMainWindow, QVBoxLayout, QLabel, QWidget, QScrollArea
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
@@ -54,8 +54,9 @@ class RecognitionWorker(QThread):
                     chunk = f.read()
                     chunk_arr = np.frombuffer(chunk, dtype=np.uint8)
 
-                self.parse_img(img_file, chunk_arr)
+                paths = self.parse_img(img_file, chunk_arr)
                 output = 'Converted successfully'
+
             except Exception as ex:
                 output = 'An error occurred <<{}>>'.format(str(ex))
 
@@ -78,14 +79,18 @@ class RecognitionWorker(QThread):
         self.send_update('> Found {} board(s)'.format(total_boards))
 
         i = 1
+        paths = []
         for board_img in boards_img:
             board = Board(board_img)
             sgf_file = 'board-{}.sgf'.format(str(i))
-            board.save_sgf(os.path.join(path_dir, sgf_file))
+            path = os.path.join(path_dir, sgf_file)
+            board.save_sgf(path)
+            paths.append(path)
 
             self.subprogress = (i + 1) / (total_boards + 1)
             self.send_update('> Board {} saved'.format(i))
             i += 1
+        return paths
 
 
 # Loads window layout
@@ -147,11 +152,11 @@ class MainWindow(Window):
 class MplCanvas(FigureCanvasQTAgg):
     def __init__(self, paths, parent=None, width=8, height=8, dpi=100):
         n_boards = len(paths)
-        fig = plt.Figure(figsize=(8, n_boards*8), dpi=dpi)
+        fig = plt.Figure(figsize=(8, n_boards * 8), dpi=dpi)
         for i in range(n_boards):
             path = paths[i]
             visualizer = Visualizer(path)
-            visualizer.draw_board(fig=fig, n_boards=n_boards, current_index=i+1)
+            visualizer.draw_board(fig=fig, n_boards=n_boards, current_index=i + 1)
         super(MplCanvas, self).__init__(fig)
 
 
@@ -159,11 +164,45 @@ class PreviewWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # layout = QtWidgets.QHBoxLayout(self.scrollAreaWidgetContents)
+
     def show_preview_image(self, paths):
         # path = 'data/images/d_3/board-1.sgf'
         sc = MplCanvas(paths=paths, parent=self, width=8, height=8, dpi=100)
 
-        self.setCentralWidget(sc)
+        # self.setCentralWidget(sc)
+
+        # layout = QtWidgets.QVBoxLayout(self.centralWidget())
+        # self.scrollArea = QtWidgets.QScrollArea(self.centralWidget())
+        # layout.addWidget(self.scrollArea)
+        # self.scrollAreaWidgetContents = QtWidgets.QWidget()
+        # self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1112, 932))
+        # self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+
+        self.scroll = QScrollArea()
+        self.widget = QWidget()
+        self.vbox = QVBoxLayout()
+
+        self.vbox.addWidget(sc)
+        #
+        # for i in range(1, 50):
+        #     object = QLabel("Test")
+        #     self.vbox.addWidget(object)
+
+        self.widget.setLayout(self.vbox)
+
+        # Scroll Area Properties
+        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setWidget(self.widget)
+
+        self.setCentralWidget(self.scroll)
+
+        self.setGeometry(600, 100, 1000, 900)
+        self.setWindowTitle('Scroll Area Demonstration')
+
+        # self.setCentralWidget(sc)
 
         self.show()
 
