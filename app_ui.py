@@ -2,6 +2,7 @@ import glob
 import sys
 import cv2
 import os
+from os import path
 
 import numpy as np
 from PyQt5 import uic, QtCore
@@ -36,7 +37,7 @@ class RecognitionWorker(QThread):
 
         for img_file in self.files:
             extension = os.path.splitext(img_file)[1]
-            if not extension in ['.png', '.jpg']:
+            if extension not in ['.png', '.jpg']:
                 self.files_done += 1
                 self.send_update('')  # Do not log skipped files
                 continue
@@ -83,11 +84,9 @@ class RecognitionWorker(QThread):
 
 
 # Loads window layout
-from os import path
-import sys
-cur_dir = path.dirname(sys.argv[0])
-window_ui_path = path.join(cur_dir, "ui", "window.ui")
-Form, Window = uic.loadUiType(window_ui_path)
+app_dir = path.dirname(sys.argv[0])
+ui_dir = path.join(app_dir, "ui")
+Form, Window = uic.loadUiType(path.join(ui_dir, "window.ui"))
 
 
 class MainWindow(Window):
