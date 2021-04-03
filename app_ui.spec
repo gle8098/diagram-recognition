@@ -4,9 +4,9 @@ block_cipher = None
 
 
 a = Analysis(['app_ui.py'],
-             pathex=['/home/supercomputer/Projects/diagram-recognition'],
+             pathex=[],
              binaries=[],
-             datas=[('ui','ui')],
+             datas=[('ui', 'ui')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -34,4 +34,8 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='app_ui')
+               name='godr')
+app = BUNDLE(coll,
+             name='godr.app',
+             icon=None,
+             bundle_identifier=None)

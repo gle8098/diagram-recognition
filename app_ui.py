@@ -83,7 +83,11 @@ class RecognitionWorker(QThread):
 
 
 # Loads window layout
-Form, Window = uic.loadUiType("ui/window.ui")
+from os import path
+import sys
+cur_dir = path.dirname(sys.argv[0])
+window_ui_path = path.join(cur_dir, "ui", "window.ui")
+Form, Window = uic.loadUiType(window_ui_path)
 
 
 class MainWindow(Window):
