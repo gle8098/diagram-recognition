@@ -22,6 +22,7 @@ from src.visualizer import Visualizer
 
 class RecognitionWorker(QThread):
     update_ui = QtCore.pyqtSignal(int, str)
+    processed = QtCore.pyqtSignal(list, list)
 
     def __init__(self, files):
         super(QObject, self).__init__()
@@ -87,6 +88,7 @@ class RecognitionWorker(QThread):
             path = os.path.join(path_dir, sgf_file)
             board.save_sgf(path)
             paths.append(path)
+            self.processed.emit([path], [board_img])
 
             self.subprogress = (i + 1) / (total_boards + 1)
             self.send_update('> Board {} saved'.format(i))
@@ -104,8 +106,15 @@ class MainWindow(Window):
 
         self.selected_files = tuple()
         self.recognition_worker = None
+        self.paths = []
+        self.images = []
 
         self.w = None
+        self.preview_is_actual = False
+
+
+
+
 
     def select_files(self):
         type_filter = "PNG (*.png);;JPEG (*.jpg)"
@@ -120,6 +129,7 @@ class MainWindow(Window):
 
         self.recognition_worker = RecognitionWorker(self.selected_files)
         self.recognition_worker.update_ui.connect(self.update_progress_bar)
+        self.recognition_worker.processed.connect(self.accept_result)
         self.recognition_worker.start()
 
     def update_progress_bar(self, percent, output):
@@ -142,18 +152,36 @@ class MainWindow(Window):
             line = '{} файлов выбрано'
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
 
-    def show_preview(self):
-        self.w = None
-        # paths = 'data/images/d_3/board-1.sgf'
-        paths = 'data/images/pages/chinese/1000_TsumeGo-10/*'
-        paths = glob.glob(paths)
-        n_boards = len(paths)
-        fig = plt.Figure(figsize=(4, n_boards * 4))#, dpi=100)
+    def accept_result(self, paths, images):
+        self.paths.extend(paths)
+        self.images.extend(images)
+        self.preview_is_actual = False
+        # self.show_preview()
+
+    def create_preview(self):
+        if self.w is not None:
+            self.w.close()
+        # self.w = None
+        if self.paths is None:
+            pass
+
+        n_boards = len(self.paths)
+        fig = plt.Figure(figsize=(4, n_boards * 4))  # , dpi=100)
         for i in range(n_boards):
-            path = paths[i]
+            path = self.paths[i]
+            img = self.images[i]
             visualizer = Visualizer(path)
-            visualizer.draw_board(fig=fig, n_boards=n_boards, current_index=i + 1)
+            visualizer.draw_board(fig=fig, img=img, n_boards=n_boards, current_index=i + 1)
         self.w = ScrollableWindow(fig)
+        self.preview_is_actual = True
+
+    def show_preview(self):
+        if not self.preview_is_actual:
+            self.create_preview()
+        self.w.show()
+
+    def show_preview_main_window(self):
+        pass
 
 
 class ScrollableWindow(QMainWindow):
@@ -161,22 +189,22 @@ class ScrollableWindow(QMainWindow):
         self.qapp = QtWidgets.QApplication([])
 
         QtWidgets.QMainWindow.__init__(self)
-        self.widget = QtWidgets.QWidget()
-        self.setCentralWidget(self.widget)
-        self.widget.setLayout(QtWidgets.QVBoxLayout())
-        self.widget.layout().setContentsMargins(0, 0, 0, 0)
-        self.widget.layout().setSpacing(0)
+        self.scrollable_area_widget = QtWidgets.QWidget()
+        self.setCentralWidget(self.scrollable_area_widget)
+
+        self.scrollable_area_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.scrollable_area_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.scrollable_area_widget.layout().setSpacing(0)
 
         self.fig = fig
         self.canvas = FigureCanvasQTAgg(self.fig)
         self.canvas.draw()
-        self.scroll = QtWidgets.QScrollArea(self.widget)
+        self.scroll = QtWidgets.QScrollArea(self.scrollable_area_widget)
         self.scroll.setWidget(self.canvas)
 
-        self.nav = NavigationToolbar2QT(self.canvas, self.widget)
-        self.widget.layout().addWidget(self.nav)
-        self.widget.layout().addWidget(self.scroll)
-        self.show()
+        self.nav = NavigationToolbar2QT(self.canvas, self.scrollable_area_widget)
+        self.scrollable_area_widget.layout().addWidget(self.nav)
+        self.scrollable_area_widget.layout().addWidget(self.scroll)
 
 
 if __name__ == '__main__':
