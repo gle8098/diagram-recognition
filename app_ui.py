@@ -108,13 +108,21 @@ class MainWindow(Window):
         self.recognition_worker = None
         self.paths = []
         self.images = []
+        self.scroll = None
 
-        self.w = None
-        self.preview_is_actual = False
+    def init_scroll_area(self):
+        scrollable_area_widget = self.findChild(QtWidgets.QWidget, "scroll_area_widget")
 
+        scrollable_area_widget.setLayout(QtWidgets.QVBoxLayout())
+        scrollable_area_widget.layout().setContentsMargins(0, 0, 0, 0)
+        scrollable_area_widget.layout().setSpacing(0)
 
-
-
+        fig = plt.figure(figsize=(6, 6))
+        canvas = FigureCanvasQTAgg(fig)
+        canvas.draw()
+        self.scroll = QtWidgets.QScrollArea(scrollable_area_widget)
+        self.scroll.setWidget(canvas)
+        scrollable_area_widget.layout().addWidget(self.scroll)
 
     def select_files(self):
         type_filter = "PNG (*.png);;JPEG (*.jpg)"
@@ -152,59 +160,26 @@ class MainWindow(Window):
             line = '{} файлов выбрано'
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
 
-    def accept_result(self, paths, images):
-        self.paths.extend(paths)
-        self.images.extend(images)
-        self.preview_is_actual = False
-        # self.show_preview()
-
-    def create_preview(self):
-        if self.w is not None:
-            self.w.close()
-        # self.w = None
-        if self.paths is None:
-            pass
-
+    def update_scroll_area(self):
         n_boards = len(self.paths)
-        fig = plt.Figure(figsize=(4, n_boards * 4))  # , dpi=100)
+        fig = plt.Figure(figsize=(6, n_boards * 6))  # , dpi=100)
         for i in range(n_boards):
             path = self.paths[i]
             img = self.images[i]
             visualizer = Visualizer(path)
             visualizer.draw_board(fig=fig, img=img, n_boards=n_boards, current_index=i + 1)
-        self.w = ScrollableWindow(fig)
-        self.preview_is_actual = True
 
-    def show_preview(self):
-        if not self.preview_is_actual:
-            self.create_preview()
-        self.w.show()
+        canvas = FigureCanvasQTAgg(fig)
+        canvas.draw()
+        self.scroll.setWidget(canvas)
 
-    def show_preview_main_window(self):
-        pass
+        # self.nav = NavigationToolbar2QT(self.canvas, self.scrollable_area_widget)
+        # self.scrollable_area_widget.layout().addWidget(self.nav)
 
-
-class ScrollableWindow(QMainWindow):
-    def __init__(self, fig):
-        self.qapp = QtWidgets.QApplication([])
-
-        QtWidgets.QMainWindow.__init__(self)
-        self.scrollable_area_widget = QtWidgets.QWidget()
-        self.setCentralWidget(self.scrollable_area_widget)
-
-        self.scrollable_area_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.scrollable_area_widget.layout().setContentsMargins(0, 0, 0, 0)
-        self.scrollable_area_widget.layout().setSpacing(0)
-
-        self.fig = fig
-        self.canvas = FigureCanvasQTAgg(self.fig)
-        self.canvas.draw()
-        self.scroll = QtWidgets.QScrollArea(self.scrollable_area_widget)
-        self.scroll.setWidget(self.canvas)
-
-        self.nav = NavigationToolbar2QT(self.canvas, self.scrollable_area_widget)
-        self.scrollable_area_widget.layout().addWidget(self.nav)
-        self.scrollable_area_widget.layout().addWidget(self.scroll)
+    def accept_result(self, paths, images):
+        self.paths.extend(paths)
+        self.images.extend(images)
+        self.update_scroll_area()
 
 
 if __name__ == '__main__':
@@ -212,6 +187,7 @@ if __name__ == '__main__':
     window = MainWindow()
     form = Form()
     form.setupUi(window)
+    window.init_scroll_area()
     window.show()
 
     # If a path passed as 1st argument, immediately process it
