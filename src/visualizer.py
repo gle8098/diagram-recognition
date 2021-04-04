@@ -1,5 +1,6 @@
 from sgfmill import sgf
 from matplotlib import pyplot as plt
+import tkinter as tk
 
 
 class Visualizer:
@@ -11,7 +12,7 @@ class Visualizer:
 
     def draw_board(self, img=None, fig=None, n_boards=1, current_index=1):
         board_size = self.game.get_size()
-        board_len = 4
+        board_len = 8
 
         if img is not None:
             if fig is None:
@@ -40,18 +41,18 @@ class Visualizer:
         black_stones = pos[0]
         white_stones = pos[1]
 
-        marker_size = 175 / (board_size + 1)
+        marker_size = 300 / (board_size + 1)
         for stone in white_stones:
             y = stone[0]
             x = stone[1]
             ax1.plot(x, y, 'o', markersize=marker_size, markeredgecolor=(0, 0, 0), markerfacecolor='w',
-                     markeredgewidth=2)
+                     markeredgewidth=1)
 
         for stone in black_stones:
             y = stone[0]
             x = stone[1]
-            ax1.plot(x, y, 'o', markersize=marker_size, markeredgecolor=(.5, .5, .5), markerfacecolor='k',
-                     markeredgewidth=2)
+            ax1.plot(x, y, 'o', markersize=marker_size, markeredgecolor=(0, 0, 0), markerfacecolor='k',
+                     markeredgewidth=1)
 
         if img is not None:
             ax2 = fig.add_subplot(n_boards, 2, 2*current_index - 1)

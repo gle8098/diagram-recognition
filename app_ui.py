@@ -109,6 +109,7 @@ class MainWindow(Window):
         self.paths = []
         self.images = []
         self.scroll = None
+        self.plt_board_len = 5.5
 
     def init_scroll_area(self):
         scrollable_area_widget = self.findChild(QtWidgets.QWidget, "scroll_area_widget")
@@ -117,7 +118,7 @@ class MainWindow(Window):
         scrollable_area_widget.layout().setContentsMargins(0, 0, 0, 0)
         scrollable_area_widget.layout().setSpacing(0)
 
-        fig = plt.figure(figsize=(6, 6))
+        fig = plt.figure(figsize=(2 * self.plt_board_len, self.plt_board_len))
         canvas = FigureCanvasQTAgg(fig)
         canvas.draw()
         self.scroll = QtWidgets.QScrollArea(scrollable_area_widget)
@@ -162,7 +163,7 @@ class MainWindow(Window):
 
     def update_scroll_area(self):
         n_boards = len(self.paths)
-        fig = plt.Figure(figsize=(6, n_boards * 6))  # , dpi=100)
+        fig = plt.Figure(figsize=(2 * self.plt_board_len, n_boards * self.plt_board_len))  # , dpi=100)
         for i in range(n_boards):
             path = self.paths[i]
             img = self.images[i]

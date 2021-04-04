@@ -7,7 +7,8 @@ class Recognizer:
     def __init__(self):
         pass
         
-    def recognize(self, img_gray):
+    def recognize(self, img):
+        img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         v_lines, h_lines = self.lines_recognition(img_gray)
         x_size, y_size = h_lines.shape[0], v_lines.shape[0]
         intersections = self.find_intersections(v_lines, h_lines)
@@ -297,7 +298,7 @@ class Recognizer:
         board_images = []
         for i in range(intersections.shape[0] - 1):
             for j in range(intersections.shape[1] - 1):
-                board_img = (page_img_gray[intersections[i][j][1] + 10:intersections[i + 1][j + 1][1] + 10,
+                board_img = (page_img[intersections[i][j][1] + 10:intersections[i + 1][j + 1][1] + 10,
                                            intersections[i][j][0] + 10:intersections[i + 1][j + 1][0] + 10])
                 board_images.append(board_img)
         return board_images
