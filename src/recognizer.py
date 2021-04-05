@@ -1,14 +1,25 @@
 import cv2
 import numpy as np
 from collections import defaultdict
+from enum import Enum, unique, auto
+
 from src.recognizer_consts import *
 
 class Recognizer:
+
+    @unique
+    class RecognitionError(Enum):
+        NO_IMG = auto()
+        NO_LINES = auto()
+        INCORRECT_SPLIT = auto()
+
     def __init__(self):
         pass
         
     def recognize(self, img_gray):
+        assert img_gray is not None, self.RecognitionError.NO_IMG
         v_lines, h_lines = self.lines_recognition(img_gray)
+        assert len(v_lines) != 0 and len(h_lines) != 0, self.RecognitionError.NO_LINES
         x_size, y_size = h_lines.shape[0], v_lines.shape[0]
         intersections = self.find_intersections(v_lines, h_lines)
         cell_size = self.get_cell_size(v_lines, h_lines)
@@ -16,9 +27,6 @@ class Recognizer:
         stones, radius = self.stones_recognition(img_gray, cell_size, intersections)
         white_stones, black_stones = self.colorize(img_gray, stones, radius)
         return intersections, white_stones, black_stones, radius, x_size, y_size, edges
-        
-    def to_RGB(self, image):
-        return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     
     def get_edges(self, img_gray):
         #CANNY_THRESHOLD1 = 100
@@ -75,7 +83,7 @@ class Recognizer:
     def merge_lines(self, lines, is_vertical):
         #MIN_DIST = 10  ???
 
-        if (lines.shape[0] == 0):
+        if lines.shape[0] == 0:
             return np.array([])
         ind = 0 if is_vertical else 1
         is_close = np.diff(lines, axis=0)[:, ind] <= MIN_DIST
@@ -101,35 +109,38 @@ class Recognizer:
         #HOUGH_LOW_THRESHOLD = 50
         #HOUGH_THRESHOLD_STEP = 15
 
-        clear_v_lines, clear_h_lines = [], []
         hough_threshold = min(img_gray.shape[0:2])
         while hough_threshold > HOUGH_THRESHOLD_STEP:
             clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, hough_threshold)
-            if ((len(clear_v_lines) > 1) and (len(clear_h_lines) > 1)):
+            if ((len(clear_v_lines) > 2) and (len(clear_h_lines) > 2)):
                 dists_x = np.diff(clear_v_lines[:, 0])
                 dists_y = np.diff(clear_h_lines[:, 1])
                 cell_size_1 = np.amin(dists_x)
                 cell_size_2 = np.amin(dists_y)
                 cell_size = min(cell_size_1, cell_size_2)
-                if (cell_size / max(cell_size_1, cell_size_2) > 0.9):
+                if cell_size / max(cell_size_1, cell_size_2) > 0.9:
                     dists = np.concatenate([dists_x, dists_y])
-                    fracs = np.modf(dists / cell_size)[0]
-                    cell_size = np.mean(dists[np.round(dists / cell_size) == 1])
-                    while hough_threshold > HOUGH_THRESHOLD_STEP:
-                        hough_threshold -= HOUGH_THRESHOLD_STEP
-                        clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, hough_threshold)
-                        dists_x = np.diff(clear_v_lines[:, 0])
-                        dists_y = np.diff(clear_h_lines[:, 1])
-                        dists = np.concatenate([dists_x, dists_y])
-                        fracs = np.modf(dists / cell_size)[0]
-                        if np.any(np.logical_and(fracs < 0.8, fracs > 0.2)):
-                            hough_threshold += HOUGH_THRESHOLD_STEP
-                            clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, hough_threshold)
-                            break
-                        else:
-                            cell_size = np.mean(dists[np.round(dists / cell_size) == 1])
+                    cell_size = np.mean(dists[np.round(dists / cell_size) ==  1])
                     break
             hough_threshold -= HOUGH_THRESHOLD_STEP
+        while hough_threshold > HOUGH_THRESHOLD_STEP:
+            hough_threshold -= HOUGH_THRESHOLD_STEP
+            clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, hough_threshold)
+            if ((len(clear_v_lines) <= 1) or (len(clear_h_lines) <= 1)):
+                hough_threshold += HOUGH_THRESHOLD_STEP
+                break
+            dists_x = np.diff(clear_v_lines[:, 0])
+            dists_y = np.diff(clear_h_lines[:, 1])
+            dists = np.concatenate([dists_x, dists_y])
+            fracs = np.modf(dists / cell_size)[0]
+            ints = np.round(dists / cell_size)
+            if np.any(np.logical_and(fracs < 0.75, fracs > 0.25)) or \
+               np.any(ints == 0):
+                hough_threshold += HOUGH_THRESHOLD_STEP
+                break
+            cell_size = np.mean(dists[ints ==  1])
+        clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, hough_threshold)
+        cell_size = np.mean(dists[np.round(dists / cell_size) ==  1])
         # Add unclear lines
         # possible bugs!
 
@@ -257,7 +268,7 @@ class Recognizer:
         black_stones = []
         for stone in stones.values():
             stone_mask = np.zeros((img_gray.shape[0], img_gray.shape[1]), np.uint8)
-            cv2.circle(stone_mask,(stone[0],stone[1]), radius // 2, 255 ,-1)
+            cv2.circle(stone_mask,(stone[0],stone[1]), round(radius * 0.8), 255 ,-1)
             average_color = cv2.mean(img_gray, mask=stone_mask)[0]
             if average_color >= WHITE_THRESHOLD:
                 white_stones.append(stone)
@@ -266,7 +277,6 @@ class Recognizer:
         return np.array(white_stones), np.array(black_stones)
 
     def get_split_lines(self, lines, is_vertical):
-        MIN_RATIO = 0.75
 
         if is_vertical:
             gaps = np.diff(lines[:, 0])
@@ -278,10 +288,11 @@ class Recognizer:
             split_line = lines[0] - [max_gap // 2, 0, max_gap // 2, 0]
         else:
             split_line = lines[0] - [0, max_gap // 2, 0, max_gap // 2]
-        split_lines.append(split_line)
-        if np.mean(gaps) / max_gap < MIN_RATIO:
+        if not np.any(split_line < 0):
+            split_lines.append(split_line)
+        if np.mean(gaps) / max_gap < SPLIT_MIN_RATIO:
             for i in range(gaps.shape[0]):
-                if gaps[i] / max_gap >= MIN_RATIO:
+                if gaps[i] / max_gap >= SPLIT_MIN_RATIO:
                     split_line = np.mean(lines[i:i + 2], axis=0).astype(int)
                     split_lines.append(split_line)
         if is_vertical:
@@ -292,18 +303,19 @@ class Recognizer:
         return np.array(split_lines)
 
     def split_into_boards(self, page_img):
-        HOUGH_THRESHOLD = 200
-
+        assert page_img is not None, self.RecognitionError.NO_IMG
         page_img_gray = cv2.cvtColor(page_img, cv2.COLOR_BGR2GRAY)
-        v_lines, h_lines = self.get_verticals_horizontals(page_img_gray[10:, 10:], HOUGH_THRESHOLD)
+        v_lines, h_lines = self.get_verticals_horizontals(page_img_gray, PAGE_HOUGH_THRESHOLD)
+        assert len(v_lines) != 0 and len(h_lines) != 0, self.RecognitionError.NO_LINES
         v_lines = self.get_split_lines(v_lines, True)
         h_lines = self.get_split_lines(h_lines, False)
         intersections = self.find_intersections(v_lines, h_lines)
         board_images = []
-        for i in range(intersections.shape[0] - 1):
-            for j in range(intersections.shape[1] - 1):
-                board_img = (page_img_gray[intersections[i][j][1] + 10:intersections[i + 1][j + 1][1] + 10,
-                                           intersections[i][j][0] + 10:intersections[i + 1][j + 1][0] + 10])
+        for j in range(intersections.shape[1] - 1):
+            for i in range(intersections.shape[0] - 1):
+                board_img = (page_img_gray[intersections[i][j][1] :intersections[i + 1][j + 1][1],
+                                           intersections[i][j][0] :intersections[i + 1][j + 1][0]])
+                assert board_img is not None, self.RecognitionError.INCORRECT_SPLIT
                 board_images.append(board_img)
         return board_images
 
