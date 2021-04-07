@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1388</width>
+    <width>1238</width>
     <height>648</height>
    </rect>
   </property>
@@ -59,9 +59,9 @@
    <widget class="QLabel" name="label_files_selected">
     <property name="geometry">
      <rect>
-      <x>260</x>
+      <x>250</x>
       <y>20</y>
-      <width>111</width>
+      <width>221</width>
       <height>16</height>
      </rect>
     </property>
@@ -85,12 +85,45 @@
    <widget class="QWidget" name="scroll_area_widget" native="true">
     <property name="geometry">
      <rect>
-      <x>247</x>
-      <y>86</y>
-      <width>1131</width>
+      <x>250</x>
+      <y>90</y>
+      <width>621</width>
       <height>511</height>
      </rect>
     </property>
+   </widget>
+   <widget class="QFrame" name="sgf_painter_frame">
+    <property name="geometry">
+     <rect>
+      <x>880</x>
+      <y>90</y>
+      <width>351</width>
+      <height>511</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Raised</enum>
+    </property>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+    </layout>
    </widget>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>

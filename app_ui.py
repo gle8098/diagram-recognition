@@ -1,23 +1,20 @@
 import glob
 import sys
-from random import randint
-
 import cv2
 import os
 from os import path
 
 import numpy as np
 from PyQt5 import uic, QtCore
-from PyQt5.QtCore import QObject, QThread, Qt
+from PyQt5.QtCore import QObject, QThread
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QFileDialog, QApplication, QMainWindow, QVBoxLayout, QLabel, QWidget, QScrollArea
+from PyQt5.QtWidgets import QFileDialog, QApplication
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
 
 from src.board import Board
 from src.recognizer import Recognizer
-
+from src.sgfpainter import SgfPainter
 from src.visualizer import Visualizer
 
 
@@ -57,7 +54,7 @@ class RecognitionWorker(QThread):
                     chunk = f.read()
                     chunk_arr = np.frombuffer(chunk, dtype=np.uint8)
 
-                paths, boards_img = self.parse_img(img_file, chunk_arr)
+                self.parse_img(img_file, chunk_arr)
                 output = 'Converted successfully'
 
             except Exception as ex:
@@ -114,7 +111,10 @@ class MainWindow(Window):
         self.scroll = None
         self.plt_board_len = 5.5
 
-    def init_scroll_area(self):
+    def init_ui(self):
+        self.sgfpainter = SgfPainter()
+        self.findChild(QtWidgets.QFrame, "sgf_painter_frame").layout().addWidget(self.sgfpainter)
+
         scrollable_area_widget = self.findChild(QtWidgets.QWidget, "scroll_area_widget")
 
         scrollable_area_widget.setLayout(QtWidgets.QVBoxLayout())
@@ -177,13 +177,13 @@ class MainWindow(Window):
         canvas.draw()
         self.scroll.setWidget(canvas)
 
-        # self.nav = NavigationToolbar2QT(self.canvas, self.scrollable_area_widget)
-        # self.scrollable_area_widget.layout().addWidget(self.nav)
-
     def accept_result(self, paths, images):
         self.paths.extend(paths)
         self.images.extend(images)
         self.update_scroll_area()
+
+        self.sgfpainter.load_game(paths[-1])
+        self.sgfpainter.update()
 
 
 if __name__ == '__main__':
@@ -191,7 +191,7 @@ if __name__ == '__main__':
     window = MainWindow()
     form = Form()
     form.setupUi(window)
-    window.init_scroll_area()
+    window.init_ui()
     window.show()
 
     # If a path passed as 1st argument, immediately process it
