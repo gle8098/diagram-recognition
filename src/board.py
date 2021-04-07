@@ -1,10 +1,11 @@
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-from .stone import Stone
-from .recognizer import Recognizer
+from src.stone import Stone
+from src.recognizer import Recognizer
 import copy
 from sgfmill import sgf, boards, sgf_moves
+
 
 class Board:
     def __init__(self, img):

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>533</width>
-    <height>381</height>
+    <width>1388</width>
+    <height>648</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,39 +17,39 @@
    <property name="enabled">
     <bool>true</bool>
    </property>
-   <widget class="QPushButton" name="pushButton">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>20</y>
-      <width>121</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Выбрать файлы</string>
-    </property>
-   </widget>
    <widget class="QPushButton" name="pushButton_2">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>50</y>
-      <width>121</width>
-      <height>24</height>
+      <x>11</x>
+      <y>46</y>
+      <width>221</width>
+      <height>28</height>
      </rect>
     </property>
     <property name="text">
      <string>Распознать</string>
     </property>
    </widget>
+   <widget class="QPushButton" name="pushButton">
+    <property name="geometry">
+     <rect>
+      <x>11</x>
+      <y>11</y>
+      <width>221</width>
+      <height>28</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Выбрать файлы</string>
+    </property>
+   </widget>
    <widget class="QPlainTextEdit" name="console_output">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>90</y>
-      <width>511</width>
-      <height>261</height>
+      <x>11</x>
+      <y>86</y>
+      <width>221</width>
+      <height>511</height>
      </rect>
     </property>
     <property name="readOnly">
@@ -59,10 +59,10 @@
    <widget class="QLabel" name="label_files_selected">
     <property name="geometry">
      <rect>
-      <x>150</x>
+      <x>260</x>
       <y>20</y>
-      <width>231</width>
-      <height>21</height>
+      <width>111</width>
+      <height>16</height>
      </rect>
     </property>
     <property name="text">
@@ -72,14 +72,24 @@
    <widget class="QProgressBar" name="progress_bar">
     <property name="geometry">
      <rect>
-      <x>150</x>
+      <x>250</x>
       <y>50</y>
       <width>231</width>
-      <height>23</height>
+      <height>24</height>
      </rect>
     </property>
     <property name="value">
      <number>0</number>
+    </property>
+   </widget>
+   <widget class="QWidget" name="scroll_area_widget" native="true">
+    <property name="geometry">
+     <rect>
+      <x>247</x>
+      <y>86</y>
+      <width>1131</width>
+      <height>511</height>
+     </rect>
     </property>
    </widget>
   </widget>
@@ -94,8 +104,8 @@
    <slot>select_files()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>370</x>
-     <y>32</y>
+     <x>136</x>
+     <y>23</y>
     </hint>
     <hint type="destinationlabel">
      <x>400</x>
@@ -110,8 +120,8 @@
    <slot>convert_to_sgf()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>504</x>
-     <y>35</y>
+     <x>136</x>
+     <y>46</y>
     </hint>
     <hint type="destinationlabel">
      <x>529</x>
@@ -123,5 +133,6 @@
  <slots>
   <slot>select_files()</slot>
   <slot>convert_to_sgf()</slot>
+  <slot>show_preview()</slot>
  </slots>
 </ui>
