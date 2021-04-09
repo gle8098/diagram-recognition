@@ -8,7 +8,8 @@ import numpy as np
 from PyQt5 import uic, QtCore
 from PyQt5.QtCore import QObject, QThread
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QFileDialog, QApplication
+from PyQt5.QtGui import QPixmap, QImage
+from PyQt5.QtWidgets import QFileDialog, QApplication, QLabel
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
@@ -100,6 +101,13 @@ ui_dir = path.join(app_dir, "ui")
 Form, Window = uic.loadUiType(path.join(ui_dir, "window.ui"))
 
 
+def CVimage_to_Qimage(img):
+    height, width, channel = img.shape
+    bytes_per_line = 3 * width
+    q_img = QImage(img.data, width, height, bytes_per_line, QImage.Format_RGB888)
+    return q_img
+
+
 class MainWindow(Window):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -115,18 +123,7 @@ class MainWindow(Window):
         self.sgfpainter = SgfPainter()
         self.findChild(QtWidgets.QFrame, "sgf_painter_frame").layout().addWidget(self.sgfpainter)
 
-        scrollable_area_widget = self.findChild(QtWidgets.QWidget, "scroll_area_widget")
-
-        scrollable_area_widget.setLayout(QtWidgets.QVBoxLayout())
-        scrollable_area_widget.layout().setContentsMargins(0, 0, 0, 0)
-        scrollable_area_widget.layout().setSpacing(0)
-
-        fig = plt.figure(figsize=(2 * self.plt_board_len, self.plt_board_len))
-        canvas = FigureCanvasQTAgg(fig)
-        canvas.draw()
-        self.scroll = QtWidgets.QScrollArea(scrollable_area_widget)
-        self.scroll.setWidget(canvas)
-        scrollable_area_widget.layout().addWidget(self.scroll)
+        self.origin_label = self.findChild(QtWidgets.QLabel, "origin_label")
 
     def select_files(self):
         type_filter = "PNG (*.png);;JPEG (*.jpg)"
@@ -180,10 +177,21 @@ class MainWindow(Window):
     def accept_result(self, paths, images):
         self.paths.extend(paths)
         self.images.extend(images)
-        self.update_scroll_area()
+        # self.update_scroll_area()
 
         self.sgfpainter.load_game(paths[-1])
         self.sgfpainter.update()
+
+        path = 'data/images/d_3.png'
+        img = cv2.imread(path, cv2.IMREAD_COLOR)
+
+        # img = images[-1]
+        # Uncommenting this line will lead to crash, even though both images[-1] and cv2.imread result are numpy arrays
+        q_img = CVimage_to_Qimage(img)
+        # It is tested that this line causes the crash (line 107 in the function)
+
+        pixmap = QPixmap(q_img)
+        self.origin_label.setPixmap(pixmap)
 
 
 if __name__ == '__main__':

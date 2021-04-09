@@ -82,16 +82,6 @@
      <number>0</number>
     </property>
    </widget>
-   <widget class="QWidget" name="scroll_area_widget" native="true">
-    <property name="geometry">
-     <rect>
-      <x>250</x>
-      <y>90</y>
-      <width>621</width>
-      <height>511</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QFrame" name="sgf_painter_frame">
     <property name="geometry">
      <rect>
@@ -124,6 +114,19 @@
       <number>0</number>
      </property>
     </layout>
+   </widget>
+   <widget class="QLabel" name="origin_label">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>90</y>
+      <width>601</width>
+      <height>501</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
    </widget>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
