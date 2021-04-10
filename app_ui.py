@@ -101,10 +101,11 @@ ui_dir = path.join(app_dir, "ui")
 Form, Window = uic.loadUiType(path.join(ui_dir, "window.ui"))
 
 
+# todo: bad function name
 def CVimage_to_Qimage(img):
     height, width, channel = img.shape
     bytes_per_line = 3 * width
-    q_img = QImage(img.data, width, height, bytes_per_line, QImage.Format_RGB888)
+    q_img = QImage(bytes(img.data), width, height, bytes_per_line, QImage.Format_RGB888)
     return q_img
 
 
@@ -185,7 +186,7 @@ class MainWindow(Window):
         path = 'data/images/d_3.png'
         img = cv2.imread(path, cv2.IMREAD_COLOR)
 
-        # img = images[-1]
+        img = images[-1]
         # Uncommenting this line will lead to crash, even though both images[-1] and cv2.imread result are numpy arrays
         q_img = CVimage_to_Qimage(img)
         # It is tested that this line causes the crash (line 107 in the function)
