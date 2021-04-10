@@ -207,6 +207,11 @@ class MainWindow(Window):
         self.origin_label.setPixmap(pixmap)
         self.update_label_board_index()
 
+    def open_current_file(self):
+        if self.current_index > -1:
+            filename = self.paths[self.current_index]
+            os.startfile(filename, 'open')
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

@@ -281,6 +281,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushButton_3</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>open_current_file()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>638</x>
+     <y>467</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>644</x>
+     <y>691</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>select_files()</slot>
@@ -289,5 +305,6 @@
   <slot>next_file()</slot>
   <slot>previous_file()</slot>
   <slot>toggle_auto_preview(bool)</slot>
+  <slot>open_current_file()</slot>
  </slots>
 </ui>
