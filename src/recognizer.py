@@ -265,14 +265,14 @@ class Recognizer:
     def colorize(self, img_gray, stones, radius):
         white_stones = []
         black_stones = []
-        for stone in stones.values():
+        for inter, stone in stones.items():
             stone_mask = np.zeros((img_gray.shape[0], img_gray.shape[1]), np.uint8)
             cv2.circle(stone_mask, (stone[0], stone[1]), round(radius * 0.8), 255, -1)
             average_color = cv2.mean(img_gray, mask=stone_mask)[0]
             if average_color >= WHITE_THRESHOLD:
-                white_stones.append(stone)
+                white_stones.append(inter)
             elif average_color <= BLACK_THRESHOLD:
-                black_stones.append(stone)
+                black_stones.append(inter)
         return np.array(white_stones), np.array(black_stones)
 
     def split_into_boards(self, page_img):

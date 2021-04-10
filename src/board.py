@@ -64,6 +64,7 @@ class Board:
             for j in range(self.intersections.shape[1]):
                 if np.array_equal(self.intersections[i][j], stone):
                     return i, j
+        # todo: check anything was returned
 
     def visualize(self):
         try:
