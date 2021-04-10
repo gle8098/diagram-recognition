@@ -33,10 +33,13 @@ class Recognizer:
         edges = self.find_edges(v_lines, h_lines, cell_size)
         stones, radius = self.stones_recognition(img_gray, cell_size, intersections)
 
-        if stones is None:
+        if len(stones) == 0:
+            raise self.NoBoardError()
+        white_stones, black_stones = self.colorize(img_gray, stones, radius)
+        
+        if len(white_stones) == 0 and len(black_stones) == 0:
             raise self.NoBoardError()
 
-        white_stones, black_stones = self.colorize(img_gray, stones, radius)
         return intersections, white_stones, black_stones, radius, x_size, y_size, edges
     
     def get_edges(self, img_gray):
@@ -274,7 +277,6 @@ class Recognizer:
 
 
     def split_into_boards(self, page_img):
-
 
         page_img_gray = cv2.cvtColor(page_img, cv2.COLOR_BGR2GRAY)
         edges = self.get_edges(page_img_gray)
