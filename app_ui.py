@@ -10,13 +10,10 @@ from PyQt5.QtCore import QObject, QThread
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtWidgets import QFileDialog, QApplication, QLabel
-from matplotlib import pyplot as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
 from src.board import Board
 from src.recognizer import Recognizer
 from src.sgfpainter import SgfPainter
-from src.visualizer import Visualizer
 
 
 class RecognitionWorker(QThread):
@@ -117,8 +114,9 @@ class MainWindow(Window):
         self.recognition_worker = None
         self.paths = []
         self.images = []
-        self.scroll = None
-        self.plt_board_len = 5.5
+        self.current_index = -1
+        self.n_boards = 0
+        self.auto_show_preview = False
 
     def init_ui(self):
         self.sgfpainter = SgfPainter()
@@ -162,32 +160,52 @@ class MainWindow(Window):
             line = '{} файлов выбрано'
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
 
-    def update_scroll_area(self):
-        n_boards = len(self.paths)
-        fig = plt.Figure(figsize=(2 * self.plt_board_len, n_boards * self.plt_board_len))  # , dpi=100)
-        for i in range(n_boards):
-            path = self.paths[i]
-            img = self.images[i]
-            visualizer = Visualizer(path)
-            visualizer.draw_board(fig=fig, img=img, n_boards=n_boards, current_index=i + 1)
-
-        canvas = FigureCanvasQTAgg(fig)
-        canvas.draw()
-        self.scroll.setWidget(canvas)
+    def update_label_board_index(self):
+        line = 'Доска {} из {}'.format(self.current_index + 1, self.n_boards)
+        self.findChild(QtWidgets.QLabel, "label_board_index").setText(line)
 
     def accept_result(self, paths, images):
         self.paths.extend(paths)
         self.images.extend(images)
-        # self.update_scroll_area()
+        self.n_boards += 1
+        if self.n_boards == 1: # Automatically display the first board, no matter the button is pressed or not
+            self.current_index = 0
+            self.display_result()
+            return
 
-        self.sgfpainter.load_game(paths[-1])
+        if self.auto_show_preview:
+            self.current_index = self.n_boards - 1
+            self.display_result()
+            return
+
+        self.update_label_board_index()
+
+    def next_file(self):
+        if self.current_index + 1 < self.n_boards:
+            self.current_index += 1
+            self.display_result()
+
+    def previous_file(self):
+        if self.current_index - 1 >= 0:
+            self.current_index -= 1
+            self.display_result()
+
+    def toggle_auto_preview(self, auto_show_preview):
+        self.auto_show_preview = auto_show_preview
+
+    def display_result(self):
+        if self.current_index == -1:
+            # Error: no files selected yet
+            return
+        self.sgfpainter.load_game(self.paths[self.current_index])
         self.sgfpainter.update()
 
-        img = images[-1]
+        img = self.images[self.current_index]
         q_img = CVimage_to_Qimage(img)
         pixmap = QPixmap(q_img).scaled(self.origin_label.width(), self.origin_label.height(),
                                        QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
         self.origin_label.setPixmap(pixmap)
+        self.update_label_board_index()
 
 
 if __name__ == '__main__':
