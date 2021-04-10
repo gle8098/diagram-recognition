@@ -1,20 +1,29 @@
 import glob
 import sys
+from random import randint
+
 import cv2
 import os
+from os import path
 
 import numpy as np
 from PyQt5 import uic, QtCore
-from PyQt5.QtCore import QObject, QThread
+from PyQt5.QtCore import QObject, QThread, Qt
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QFileDialog, QApplication
+from PyQt5.QtWidgets import QFileDialog, QApplication, QMainWindow, QVBoxLayout, QLabel, QWidget, QScrollArea
+from matplotlib import pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
 
 from src.board import Board
 from src.recognizer import Recognizer
 
+from src.visualizer import Visualizer
+
 
 class RecognitionWorker(QThread):
     update_ui = QtCore.pyqtSignal(int, str)
+    processed = QtCore.pyqtSignal(list, list)
 
     def __init__(self, files):
         super(QObject, self).__init__()
@@ -36,7 +45,7 @@ class RecognitionWorker(QThread):
 
         for img_file in self.files:
             extension = os.path.splitext(img_file)[1]
-            if not extension in ['.png', '.jpg']:
+            if extension not in ['.png', '.jpg']:
                 self.files_done += 1
                 self.send_update('')  # Do not log skipped files
                 continue
@@ -48,8 +57,9 @@ class RecognitionWorker(QThread):
                     chunk = f.read()
                     chunk_arr = np.frombuffer(chunk, dtype=np.uint8)
 
-                self.parse_img(img_file, chunk_arr)
+                paths, boards_img = self.parse_img(img_file, chunk_arr)
                 output = 'Converted successfully'
+
             except Exception as ex:
                 output = 'An error occurred <<{}>>'.format(str(ex))
 
@@ -72,18 +82,25 @@ class RecognitionWorker(QThread):
         self.send_update('> Found {} board(s)'.format(total_boards))
 
         i = 1
+        paths = []
         for board_img in boards_img:
             board = Board(board_img)
             sgf_file = 'board-{}.sgf'.format(str(i))
-            board.save_sgf(os.path.join(path_dir, sgf_file))
+            path = os.path.join(path_dir, sgf_file)
+            board.save_sgf(path)
+            paths.append(path)
+            self.processed.emit([path], [board_img])
 
             self.subprogress = (i + 1) / (total_boards + 1)
             self.send_update('> Board {} saved'.format(i))
             i += 1
+        return paths, boards_img
 
 
 # Loads window layout
-Form, Window = uic.loadUiType("ui/window.ui")
+app_dir = path.dirname(sys.argv[0])
+ui_dir = path.join(app_dir, "ui")
+Form, Window = uic.loadUiType(path.join(ui_dir, "window.ui"))
 
 
 class MainWindow(Window):
@@ -92,6 +109,24 @@ class MainWindow(Window):
 
         self.selected_files = tuple()
         self.recognition_worker = None
+        self.paths = []
+        self.images = []
+        self.scroll = None
+        self.plt_board_len = 5.5
+
+    def init_scroll_area(self):
+        scrollable_area_widget = self.findChild(QtWidgets.QWidget, "scroll_area_widget")
+
+        scrollable_area_widget.setLayout(QtWidgets.QVBoxLayout())
+        scrollable_area_widget.layout().setContentsMargins(0, 0, 0, 0)
+        scrollable_area_widget.layout().setSpacing(0)
+
+        fig = plt.figure(figsize=(2 * self.plt_board_len, self.plt_board_len))
+        canvas = FigureCanvasQTAgg(fig)
+        canvas.draw()
+        self.scroll = QtWidgets.QScrollArea(scrollable_area_widget)
+        self.scroll.setWidget(canvas)
+        scrollable_area_widget.layout().addWidget(self.scroll)
 
     def select_files(self):
         type_filter = "PNG (*.png);;JPEG (*.jpg)"
@@ -106,6 +141,7 @@ class MainWindow(Window):
 
         self.recognition_worker = RecognitionWorker(self.selected_files)
         self.recognition_worker.update_ui.connect(self.update_progress_bar)
+        self.recognition_worker.processed.connect(self.accept_result)
         self.recognition_worker.start()
 
     def update_progress_bar(self, percent, output):
@@ -128,12 +164,34 @@ class MainWindow(Window):
             line = '{} файлов выбрано'
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
 
+    def update_scroll_area(self):
+        n_boards = len(self.paths)
+        fig = plt.Figure(figsize=(2 * self.plt_board_len, n_boards * self.plt_board_len))  # , dpi=100)
+        for i in range(n_boards):
+            path = self.paths[i]
+            img = self.images[i]
+            visualizer = Visualizer(path)
+            visualizer.draw_board(fig=fig, img=img, n_boards=n_boards, current_index=i + 1)
+
+        canvas = FigureCanvasQTAgg(fig)
+        canvas.draw()
+        self.scroll.setWidget(canvas)
+
+        # self.nav = NavigationToolbar2QT(self.canvas, self.scrollable_area_widget)
+        # self.scrollable_area_widget.layout().addWidget(self.nav)
+
+    def accept_result(self, paths, images):
+        self.paths.extend(paths)
+        self.images.extend(images)
+        self.update_scroll_area()
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = MainWindow()
     form = Form()
     form.setupUi(window)
+    window.init_scroll_area()
     window.show()
 
     # If a path passed as 1st argument, immediately process it
