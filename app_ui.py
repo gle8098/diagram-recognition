@@ -9,7 +9,7 @@ from PyQt5 import uic, QtCore
 from PyQt5.QtCore import QObject, QThread
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QPixmap, QImage
-from PyQt5.QtWidgets import QFileDialog, QApplication, QLabel
+from PyQt5.QtWidgets import QFileDialog, QApplication
 
 from src.board import Board
 from src.recognizer import Recognizer
@@ -116,13 +116,16 @@ class MainWindow(Window):
         self.images = []
         self.current_index = -1
         self.n_boards = 0
-        self.auto_show_preview = False
+        self.sgfpainter = None
+        self.origin_label = None
+        self.auto_preview_widget = None
 
     def init_ui(self):
         self.sgfpainter = SgfPainter()
         self.findChild(QtWidgets.QFrame, "sgf_painter_frame").layout().addWidget(self.sgfpainter)
 
         self.origin_label = self.findChild(QtWidgets.QLabel, "origin_label")
+        self.auto_preview_widget = self.findChild(QtWidgets.QCheckBox, "auto_preview")
 
     def select_files(self):
         type_filter = "PNG (*.png);;JPEG (*.jpg)"
@@ -168,12 +171,12 @@ class MainWindow(Window):
         self.paths.extend(paths)
         self.images.extend(images)
         self.n_boards += 1
-        if self.n_boards == 1: # Automatically display the first board, no matter the button is pressed or not
+        if self.n_boards == 1:  # Automatically display the first board, no matter the button is pressed or not
             self.current_index = 0
             self.display_result()
             return
 
-        if self.auto_show_preview:
+        if self.is_auto_preview_on():
             self.current_index = self.n_boards - 1
             self.display_result()
             return
@@ -184,14 +187,14 @@ class MainWindow(Window):
         if self.current_index + 1 < self.n_boards:
             self.current_index += 1
             self.display_result()
-
+    # todo: uncheck 'auto_preview' when clicked {next,previous}_file()
     def previous_file(self):
         if self.current_index - 1 >= 0:
             self.current_index -= 1
             self.display_result()
 
-    def toggle_auto_preview(self, auto_show_preview):
-        self.auto_show_preview = auto_show_preview
+    def is_auto_preview_on(self):
+        return self.auto_preview_widget.checkState() == QtCore.Qt.Checked
 
     def display_result(self):
         if self.current_index == -1:
@@ -210,7 +213,10 @@ class MainWindow(Window):
     def open_current_file(self):
         if self.current_index > -1:
             filename = self.paths[self.current_index]
-            os.startfile(filename, 'open')
+            try:
+                os.startfile(filename, 'open')
+            except AttributeError:
+                pass  # todo
 
 
 if __name__ == '__main__':
