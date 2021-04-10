@@ -4,6 +4,7 @@ import cv2
 import os
 from os import path
 
+import qtawesome as qta
 import numpy as np
 from PyQt5 import uic, QtCore
 from PyQt5.QtCore import QObject, QThread
@@ -126,6 +127,9 @@ class MainWindow(Window):
 
         self.origin_label = self.findChild(QtWidgets.QLabel, "origin_label")
         self.auto_preview_widget = self.findChild(QtWidgets.QCheckBox, "auto_preview")
+
+        self.findChild(QtWidgets.QPushButton, "previous_button").setIcon(qta.icon('fa5s.angle-double-left'))
+        self.findChild(QtWidgets.QPushButton, "next_button"    ).setIcon(qta.icon('fa5s.angle-double-right'))
 
     def select_files(self):
         type_filter = "PNG (*.png);;JPEG (*.jpg)"
