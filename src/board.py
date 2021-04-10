@@ -105,6 +105,7 @@ class Board:
             for j in range(self.intersections.shape[1]):
                 if np.array_equal(self.intersections[i][j], stone):
                     return i, j
+        # todo: check anything was returned
 
     def visualize(self):
         try:
@@ -130,30 +131,17 @@ class Board:
             return
 
     def save_sgf(self, path):
-        min_x = np.min(self.intersections.T[0])
-        min_y = np.min(self.intersections.T[1])
-        max_x = np.max(self.intersections.T[0])
-        max_y = np.max(self.intersections.T[1])
-
         game = sgf.Sgf_game(self.board_size)
-
         board = boards.Board(self.board_size)
 
-        for stone in self.white_stones:
-            x = self.board_size - stone.local_y - 1
-            y = stone.local_x
-            if (x < 0) or (x >= self.board_size) or (y < 0) or (y >= self.board_size):
-                print('Coordinate error')
-                continue
-            board.play(x, y, 'w')
-
-        for stone in self.black_stones:
-            x = self.board_size - stone.local_y - 1
-            y = stone.local_x
-            if (x < 0) or (x >= self.board_size) or (y < 0) or (y >= self.board_size):
-                print('Coordinate error')
-                continue
-            board.play(x, y, 'b')
+        for stones, color in zip((self.white_stones, self.black_stones), ('w', 'b')):
+            for stone in stones:
+                x = self.board_size - stone.local_y - 1
+                y = stone.local_x
+                if (x < 0) or (x >= self.board_size) or (y < 0) or (y >= self.board_size):
+                    print('Coordinate error')
+                    continue
+                board.play(x, y, color)
 
         sgf_moves.set_initial_position(game, board)
         game_bytes = game.serialise()
