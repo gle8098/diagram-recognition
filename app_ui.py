@@ -183,15 +183,10 @@ class MainWindow(Window):
         self.sgfpainter.load_game(paths[-1])
         self.sgfpainter.update()
 
-        path = 'data/images/d_3.png'
-        img = cv2.imread(path, cv2.IMREAD_COLOR)
-
         img = images[-1]
-        # Uncommenting this line will lead to crash, even though both images[-1] and cv2.imread result are numpy arrays
         q_img = CVimage_to_Qimage(img)
-        # It is tested that this line causes the crash (line 107 in the function)
-
-        pixmap = QPixmap(q_img)
+        pixmap = QPixmap(q_img).scaled(self.origin_label.width(), self.origin_label.height(),
+                                       QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
         self.origin_label.setPixmap(pixmap)
 
 

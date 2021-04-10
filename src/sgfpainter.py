@@ -53,7 +53,7 @@ class SgfPainter(QWidget):
         s = min(w, h)  # size of board+margin
         sgf_board_size = self.game.get_size()
 
-        bg_brush = QBrush(QColor("#FFC050"))
+        bg_brush = QBrush(QColor("#FFFFFF"))  # "#FFC050"
         qp.fillRect(QRect(0, 0, w, h), bg_brush)
 
         pen = QPen(Qt.black)
