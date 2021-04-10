@@ -70,7 +70,7 @@
          <item>
           <widget class="QLabel" name="origin_label">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+            <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
