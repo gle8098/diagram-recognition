@@ -3,3 +3,4 @@ opencv-python-headless
 sgfmill
 pyqt5
 numpy
+QtAwesome

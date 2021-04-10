@@ -1,24 +1,20 @@
 import glob
 import sys
-from random import randint
-
 import cv2
 import os
 from os import path
 
+import qtawesome as qta
 import numpy as np
 from PyQt5 import uic, QtCore
-from PyQt5.QtCore import QObject, QThread, Qt
+from PyQt5.QtCore import QObject, QThread
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QFileDialog, QApplication, QMainWindow, QVBoxLayout, QLabel, QWidget, QScrollArea
-from matplotlib import pyplot as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
+from PyQt5.QtGui import QPixmap, QImage
+from PyQt5.QtWidgets import QFileDialog, QApplication
 
 from src.board import Board
 from src.recognizer import Recognizer
-
-from src.visualizer import Visualizer
+from src.sgfpainter import SgfPainter
 
 
 class RecognitionWorker(QThread):
@@ -57,7 +53,7 @@ class RecognitionWorker(QThread):
                     chunk = f.read()
                     chunk_arr = np.frombuffer(chunk, dtype=np.uint8)
 
-                paths, boards_img = self.parse_img(img_file, chunk_arr)
+                self.parse_img(img_file, chunk_arr)
                 output = 'Converted successfully'
 
             except Exception as ex:
@@ -103,6 +99,14 @@ ui_dir = path.join(app_dir, "ui")
 Form, Window = uic.loadUiType(path.join(ui_dir, "window.ui"))
 
 
+# todo: bad function name
+def CVimage_to_Qimage(img):
+    height, width, channel = img.shape
+    bytes_per_line = 3 * width
+    q_img = QImage(bytes(img.data), width, height, bytes_per_line, QImage.Format_RGB888)
+    return q_img
+
+
 class MainWindow(Window):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -111,22 +115,21 @@ class MainWindow(Window):
         self.recognition_worker = None
         self.paths = []
         self.images = []
-        self.scroll = None
-        self.plt_board_len = 5.5
+        self.current_index = -1
+        self.n_boards = 0
+        self.sgfpainter = None
+        self.origin_label = None
+        self.auto_preview_widget = None
 
-    def init_scroll_area(self):
-        scrollable_area_widget = self.findChild(QtWidgets.QWidget, "scroll_area_widget")
+    def init_ui(self):
+        self.sgfpainter = SgfPainter()
+        self.findChild(QtWidgets.QFrame, "sgf_painter_frame").layout().addWidget(self.sgfpainter)
 
-        scrollable_area_widget.setLayout(QtWidgets.QVBoxLayout())
-        scrollable_area_widget.layout().setContentsMargins(0, 0, 0, 0)
-        scrollable_area_widget.layout().setSpacing(0)
+        self.origin_label = self.findChild(QtWidgets.QLabel, "origin_label")
+        self.auto_preview_widget = self.findChild(QtWidgets.QCheckBox, "auto_preview")
 
-        fig = plt.figure(figsize=(2 * self.plt_board_len, self.plt_board_len))
-        canvas = FigureCanvasQTAgg(fig)
-        canvas.draw()
-        self.scroll = QtWidgets.QScrollArea(scrollable_area_widget)
-        self.scroll.setWidget(canvas)
-        scrollable_area_widget.layout().addWidget(self.scroll)
+        self.findChild(QtWidgets.QPushButton, "previous_button").setIcon(qta.icon('fa5s.angle-double-left'))
+        self.findChild(QtWidgets.QPushButton, "next_button"    ).setIcon(qta.icon('fa5s.angle-double-right'))
 
     def select_files(self):
         type_filter = "PNG (*.png);;JPEG (*.jpg)"
@@ -164,26 +167,60 @@ class MainWindow(Window):
             line = '{} файлов выбрано'
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
 
-    def update_scroll_area(self):
-        n_boards = len(self.paths)
-        fig = plt.Figure(figsize=(2 * self.plt_board_len, n_boards * self.plt_board_len))  # , dpi=100)
-        for i in range(n_boards):
-            path = self.paths[i]
-            img = self.images[i]
-            visualizer = Visualizer(path)
-            visualizer.draw_board(fig=fig, img=img, n_boards=n_boards, current_index=i + 1)
-
-        canvas = FigureCanvasQTAgg(fig)
-        canvas.draw()
-        self.scroll.setWidget(canvas)
-
-        # self.nav = NavigationToolbar2QT(self.canvas, self.scrollable_area_widget)
-        # self.scrollable_area_widget.layout().addWidget(self.nav)
+    def update_label_board_index(self):
+        line = 'Доска {} из {}'.format(self.current_index + 1, self.n_boards)
+        self.findChild(QtWidgets.QLabel, "label_board_index").setText(line)
 
     def accept_result(self, paths, images):
         self.paths.extend(paths)
         self.images.extend(images)
-        self.update_scroll_area()
+        self.n_boards += 1
+        if self.n_boards == 1:  # Automatically display the first board, no matter the button is pressed or not
+            self.current_index = 0
+            self.display_result()
+            return
+
+        if self.is_auto_preview_on():
+            self.current_index = self.n_boards - 1
+            self.display_result()
+            return
+
+        self.update_label_board_index()
+
+    def next_file(self):
+        if self.current_index + 1 < self.n_boards:
+            self.current_index += 1
+            self.display_result()
+    # todo: uncheck 'auto_preview' when clicked {next,previous}_file()
+    def previous_file(self):
+        if self.current_index - 1 >= 0:
+            self.current_index -= 1
+            self.display_result()
+
+    def is_auto_preview_on(self):
+        return self.auto_preview_widget.checkState() == QtCore.Qt.Checked
+
+    def display_result(self):
+        if self.current_index == -1:
+            # Error: no files selected yet
+            return
+        self.sgfpainter.load_game(self.paths[self.current_index])
+        self.sgfpainter.update()
+
+        img = self.images[self.current_index]
+        q_img = CVimage_to_Qimage(img)
+        pixmap = QPixmap(q_img).scaled(self.origin_label.width(), self.origin_label.height(),
+                                       QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
+        self.origin_label.setPixmap(pixmap)
+        self.update_label_board_index()
+
+    def open_current_file(self):
+        if self.current_index > -1:
+            filename = self.paths[self.current_index]
+            try:
+                os.startfile(filename, 'open')
+            except AttributeError:
+                pass  # todo
 
 
 if __name__ == '__main__':
@@ -191,7 +228,7 @@ if __name__ == '__main__':
     window = MainWindow()
     form = Form()
     form.setupUi(window)
-    window.init_scroll_area()
+    window.init_ui()
     window.show()
 
     # If a path passed as 1st argument, immediately process it
