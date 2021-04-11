@@ -155,7 +155,7 @@ class MainWindow(Window):
         self.recognition_worker = RecognitionWorker(self.selected_files)
         self.recognition_worker.update_ui.connect(self.update_progress_bar)
         self.recognition_worker.send_board.connect(self.accept_new_board)
-        self.recognition_worker.send_board.connect(lambda: self.lock_recognize_button(False))
+        self.recognition_worker.done.connect(lambda: self.lock_recognize_button(False))
         self.recognition_worker.start()
 
     def update_progress_bar(self, percent, output):
@@ -179,7 +179,7 @@ class MainWindow(Window):
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
 
     def lock_recognize_button(self, state):
-        self.findChild(QtWidgets.QPushButton, "recognize").setEnabled(state)
+        self.findChild(QtWidgets.QPushButton, "recognize").setEnabled(not state)
 
     def update_preview_board_label(self):
         line = 'Доска {} из {}'.format(self.current_index + 1, self.n_boards)
