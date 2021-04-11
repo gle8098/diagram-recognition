@@ -21,6 +21,7 @@ from src.sgfpainter import SgfPainter
 class RecognitionWorker(QThread):
     update_ui = QtCore.pyqtSignal(int, str)   # (percent, append_to_console)
     send_board = QtCore.pyqtSignal(str, np.ndarray)  # (path_to_sgf, img)
+    done = QtCore.pyqtSignal()
 
     def __init__(self, files):
         super(QObject, self).__init__()
@@ -63,6 +64,8 @@ class RecognitionWorker(QThread):
             self.subprogress = 0
             self.files_done += 1
             self.send_update(output + '\n')
+
+        self.done.emit()
 
     def parse_img(self, img_path, img_bytes):
         # Create dir
@@ -147,10 +150,12 @@ class MainWindow(Window):
 
     def convert_to_sgf(self):
         print('Files are {}'.format(self.selected_files))
+        self.lock_recognize_button(True)
 
         self.recognition_worker = RecognitionWorker(self.selected_files)
         self.recognition_worker.update_ui.connect(self.update_progress_bar)
         self.recognition_worker.send_board.connect(self.accept_new_board)
+        self.recognition_worker.send_board.connect(lambda: self.lock_recognize_button(False))
         self.recognition_worker.start()
 
     def update_progress_bar(self, percent, output):
@@ -172,6 +177,9 @@ class MainWindow(Window):
         else:
             line = '{} файлов выбрано'
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
+
+    def lock_recognize_button(self, state):
+        self.findChild(QtWidgets.QPushButton, "recognize").setEnabled(state)
 
     def update_preview_board_label(self):
         line = 'Доска {} из {}'.format(self.current_index + 1, self.n_boards)

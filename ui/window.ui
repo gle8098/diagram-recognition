@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Распознавание диаграмм го</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="enabled">
@@ -32,14 +32,17 @@
      </widget>
     </item>
     <item row="1" column="0">
-     <widget class="QPushButton" name="pushButton_2">
+     <widget class="QPushButton" name="recognize">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
       <property name="text">
        <string>Распознать</string>
       </property>
      </widget>
     </item>
     <item row="0" column="0">
-     <widget class="QPushButton" name="pushButton">
+     <widget class="QPushButton" name="choose_files">
       <property name="text">
        <string>Выбрать файлы</string>
       </property>
@@ -273,7 +276,7 @@
  <resources/>
  <connections>
   <connection>
-   <sender>pushButton</sender>
+   <sender>choose_files</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
    <slot>select_files()</slot>
@@ -289,7 +292,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton_2</sender>
+   <sender>recognize</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
    <slot>convert_to_sgf()</slot>
