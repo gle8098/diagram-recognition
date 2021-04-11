@@ -9,17 +9,18 @@ import numpy as np
 from PyQt5 import uic, QtCore
 from PyQt5.QtCore import QObject, QThread
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QPixmap, QImage
+from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette
 from PyQt5.QtWidgets import QFileDialog, QApplication
 
+from src import miscellaneous
 from src.board import Board
 from src.recognizer import Recognizer
 from src.sgfpainter import SgfPainter
 
 
 class RecognitionWorker(QThread):
-    update_ui = QtCore.pyqtSignal(int, str)
-    processed = QtCore.pyqtSignal(list, list)
+    update_ui = QtCore.pyqtSignal(int, str)   # (percent, append_to_console)
+    send_board = QtCore.pyqtSignal(str, np.ndarray)  # (path_to_sgf, img)
 
     def __init__(self, files):
         super(QObject, self).__init__()
@@ -75,7 +76,7 @@ class RecognitionWorker(QThread):
 
         total_boards = len(boards_img)
         self.subprogress = 1 / (total_boards + 1)
-        self.send_update('> Found {} board(s)'.format(total_boards))
+        self.send_update('Found {} board(s)'.format(total_boards))
 
         i = 1
         paths = []
@@ -85,7 +86,7 @@ class RecognitionWorker(QThread):
             path = os.path.join(path_dir, sgf_file)
             board.save_sgf(path)
             paths.append(path)
-            self.processed.emit([path], [board_img])
+            self.send_board.emit(path, board_img)
 
             self.subprogress = (i + 1) / (total_boards + 1)
             self.send_update('> Board {} saved'.format(i))
@@ -99,29 +100,29 @@ ui_dir = path.join(app_dir, "ui")
 Form, Window = uic.loadUiType(path.join(ui_dir, "window.ui"))
 
 
-# todo: bad function name
-def CVimage_to_Qimage(img):
-    height, width, channel = img.shape
-    bytes_per_line = 3 * width
-    q_img = QImage(bytes(img.data), width, height, bytes_per_line, QImage.Format_RGB888)
-    return q_img
-
-
 class MainWindow(Window):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.selected_files = tuple()
         self.recognition_worker = None
+
+        # Boards preview
         self.paths = []
-        self.images = []
+        self.images = []  # List of QPixmap
         self.current_index = -1
         self.n_boards = 0
+
+        # Widgets
         self.sgfpainter = None
         self.origin_label = None
         self.auto_preview_widget = None
 
     def init_ui(self):
+        # Init QtAwesome color from selected theme
+        qta_color = QColor(QPalette().color(QPalette.Normal, QPalette.WindowText))
+        qta.set_defaults(color=qta_color)
+
         self.sgfpainter = SgfPainter()
         self.findChild(QtWidgets.QFrame, "sgf_painter_frame").layout().addWidget(self.sgfpainter)
 
@@ -129,7 +130,12 @@ class MainWindow(Window):
         self.auto_preview_widget = self.findChild(QtWidgets.QCheckBox, "auto_preview")
 
         self.findChild(QtWidgets.QPushButton, "previous_button").setIcon(qta.icon('fa5s.angle-double-left'))
-        self.findChild(QtWidgets.QPushButton, "next_button"    ).setIcon(qta.icon('fa5s.angle-double-right'))
+        self.findChild(QtWidgets.QPushButton, "next_button").setIcon(qta.icon('fa5s.angle-double-right'))
+
+    def resizeEvent(self, event):
+        result = super(Window, self).resizeEvent(event)
+        self.redraw_preview_image()
+        return result
 
     def select_files(self):
         type_filter = "PNG (*.png);;JPEG (*.jpg)"
@@ -144,7 +150,7 @@ class MainWindow(Window):
 
         self.recognition_worker = RecognitionWorker(self.selected_files)
         self.recognition_worker.update_ui.connect(self.update_progress_bar)
-        self.recognition_worker.processed.connect(self.accept_result)
+        self.recognition_worker.send_board.connect(self.accept_new_board)
         self.recognition_worker.start()
 
     def update_progress_bar(self, percent, output):
@@ -167,60 +173,61 @@ class MainWindow(Window):
             line = '{} файлов выбрано'
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
 
-    def update_label_board_index(self):
+    def update_preview_board_label(self):
         line = 'Доска {} из {}'.format(self.current_index + 1, self.n_boards)
         self.findChild(QtWidgets.QLabel, "label_board_index").setText(line)
 
-    def accept_result(self, paths, images):
-        self.paths.extend(paths)
-        self.images.extend(images)
+    def accept_new_board(self, path, image):
+        height, width, channel = image.shape
+        bytes_per_line = 3 * width
+        pixmap_img = QPixmap(QImage(bytes(image.data), width, height, bytes_per_line, QImage.Format_RGB888))
+
+        self.paths.append(path)
+        self.images.append(pixmap_img)
         self.n_boards += 1
-        if self.n_boards == 1:  # Automatically display the first board, no matter the button is pressed or not
-            self.current_index = 0
-            self.display_result()
-            return
 
-        if self.is_auto_preview_on():
-            self.current_index = self.n_boards - 1
-            self.display_result()
-            return
-
-        self.update_label_board_index()
+        index = self.current_index
+        if self.n_boards == 1:  # Display the only board
+            index = 0
+        elif self.is_auto_preview_on():
+            index = self.n_boards - 1
+        self.set_preview_index(index)
 
     def next_file(self):
-        if self.current_index + 1 < self.n_boards:
-            self.current_index += 1
-            self.display_result()
-    # todo: uncheck 'auto_preview' when clicked {next,previous}_file()
+        self.set_preview_index(self.current_index + 1)
+
     def previous_file(self):
-        if self.current_index - 1 >= 0:
-            self.current_index -= 1
-            self.display_result()
+        self.set_preview_index(self.current_index - 1)
 
     def is_auto_preview_on(self):
         return self.auto_preview_widget.checkState() == QtCore.Qt.Checked
 
-    def display_result(self):
+    def set_preview_index(self, index):
+        if index < 0 or index >= self.n_boards:
+            return False
+
+        self.current_index = index
+        self.sgfpainter.load_game(self.paths[index], update=True)
+        self.redraw_preview_image()
+        self.update_preview_board_label()
+        return True
+
+    def redraw_preview_image(self):
         if self.current_index == -1:
-            # Error: no files selected yet
             return
-        self.sgfpainter.load_game(self.paths[self.current_index])
-        self.sgfpainter.update()
 
-        img = self.images[self.current_index]
-        q_img = CVimage_to_Qimage(img)
-        pixmap = QPixmap(q_img).scaled(self.origin_label.width(), self.origin_label.height(),
-                                       QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
-        self.origin_label.setPixmap(pixmap)
-        self.update_label_board_index()
+        pixmap = self.images[self.current_index]
+        pixmap_scaled = pixmap.scaled(self.origin_label.width(), self.origin_label.height(),
+                                      QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
+        self.origin_label.setPixmap(pixmap_scaled)
 
-    def open_current_file(self):
+    def open_current_sgf(self):
         if self.current_index > -1:
             filename = self.paths[self.current_index]
             try:
-                os.startfile(filename, 'open')
-            except AttributeError:
-                pass  # todo
+                miscellaneous.open_file_in_external_app(filename)
+            except Exception as ex:
+                print("Could not open file \"{}\" because <<{}>>".format(filename, str(ex)))
 
 
 if __name__ == '__main__':
@@ -231,7 +238,7 @@ if __name__ == '__main__':
     window.init_ui()
     window.show()
 
-    # If a path passed as 1st argument, immediately process it
+    # If a path is passed as 1st argument, immediately process it
     if len(sys.argv) > 1:
         files = []
         for path in sys.argv[1].split(','):

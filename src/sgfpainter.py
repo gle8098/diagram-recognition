@@ -23,9 +23,12 @@ class SgfPainter(QWidget):
         self.setWindowTitle('Sgf Painter example')
         self.show()
 
-    def load_game(self, sgf_path):
+    def load_game(self, sgf_path, **kwargs):
         with open(sgf_path, "rb") as f:
             self.game = sgf.Sgf_game.from_bytes(f.read())
+
+        if kwargs['update']:
+            self.update()
 
     def paintEvent(self, event):
         qp = QPainter()

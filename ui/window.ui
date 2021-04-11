@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>886</width>
-    <height>489</height>
+    <height>511</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -60,11 +60,35 @@
      </widget>
     </item>
     <item row="2" column="1">
-     <widget class="QGroupBox" name="groupBox">
+     <widget class="QGroupBox" name="boards_preview">
       <property name="title">
        <string>Предпросмотр досок</string>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout" stretch="1,0,0">
+      <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0,0">
+       <item>
+        <layout class="QHBoxLayout" name="titles">
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Изображение из файла</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>Распознанный SGF</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
        <item>
         <layout class="QHBoxLayout" name="images">
          <item>
@@ -125,7 +149,7 @@
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="controls" stretch="0,0,0,0,0">
+        <layout class="QHBoxLayout" name="controls1" stretch="0,0,0,0,0">
          <property name="spacing">
           <number>6</number>
          </property>
@@ -203,7 +227,7 @@
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <layout class="QHBoxLayout" name="controls2">
          <property name="spacing">
           <number>6</number>
          </property>
@@ -316,7 +340,7 @@
    <sender>pushButton_3</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
-   <slot>open_current_file()</slot>
+   <slot>open_current_sgf()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>324</x>
@@ -335,7 +359,6 @@
   <slot>show_preview()</slot>
   <slot>next_file()</slot>
   <slot>previous_file()</slot>
-  <slot>toggle_auto_preview(bool)</slot>
-  <slot>open_current_file()</slot>
+  <slot>open_current_sgf()</slot>
  </slots>
 </ui>
