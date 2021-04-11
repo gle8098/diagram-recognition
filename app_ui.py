@@ -141,7 +141,7 @@ class MainWindow(Window):
         return result
 
     def select_files(self):
-        type_filter = "PNG (*.png);;JPEG (*.jpg)"
+        type_filter = "PNG, JPEG (*.png *.jpg)"
         dialog = QFileDialog()
         dialog.setFileMode(QFileDialog.ExistingFiles)
         names, _ = dialog.getOpenFileNames(self, caption="Open files", directory=os.getcwd(), filter=type_filter)
