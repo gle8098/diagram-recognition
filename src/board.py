@@ -68,11 +68,20 @@ class Board:
                 # Incorrect board, shouldn't ever happen
                 raise Exception
         else:
-            up_edge_size = EDGE_GAP * int(not up_edge)
-            down_edge_size = EDGE_GAP * int(not down_edge)
-            left_edge_size = EDGE_GAP * int(not left_edge)
-            right_edge_size = EDGE_GAP * int(not right_edge)
-            self.board_size = max(x_size + left_edge_size + right_edge_size, y_size + up_edge_size + down_edge_size)
+            # The board has two edges that are adjacent or less
+            up_gap = EDGE_GAP * int(not up_edge)
+            down_gap = EDGE_GAP * int(not down_edge)
+            left_gap = EDGE_GAP * int(not left_edge)
+            right_gap = EDGE_GAP * int(not right_edge)
+            self.board_size = max(x_size + left_gap + right_gap, y_size + up_gap + down_gap)
+            if not left_edge:
+                left_edge_size = self.board_size - x_size
+            else:
+                left_edge_size = 0
+            if not up_edge:
+                up_edge_size = self.board_size - y_size
+            else:
+                up_edge_size = 0
 
         for stone in white_stones:
             global_x = stone[0]
