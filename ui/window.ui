@@ -235,7 +235,7 @@
           <number>6</number>
          </property>
          <item>
-          <widget class="QPushButton" name="pushButton_3">
+          <widget class="QPushButton" name="open_sgf">
            <property name="text">
             <string>Открыть SGF</string>
            </property>
@@ -340,7 +340,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton_3</sender>
+   <sender>open_sgf</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
    <slot>open_current_sgf()</slot>

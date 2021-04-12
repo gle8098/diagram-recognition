@@ -87,3 +87,7 @@ class SgfPainter(QWidget):
         pen = QPen(Qt.black)
         qp.setPen(pen)
         qp.drawText(QRect(0, 0, self.width(), 28), QtCore.Qt.AlignCenter, msg)
+
+    def load_empty(self):
+        self.game = None
+        self.update()

@@ -9,7 +9,7 @@ import numpy as np
 from PyQt5 import uic, QtCore
 from PyQt5.QtCore import QObject, QThread
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette
+from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette, QPainter
 from PyQt5.QtWidgets import QFileDialog, QApplication
 
 from src import miscellaneous
@@ -56,7 +56,7 @@ class RecognitionWorker(QThread):
                     chunk_arr = np.frombuffer(chunk, dtype=np.uint8)
 
                 self.parse_img(img_file, chunk_arr)
-                output = 'Converted successfully'
+                output = "Converting finished"
 
             except Exception as ex:
                 output = 'An error occurred <<{}>>'.format(str(ex))
@@ -84,16 +84,23 @@ class RecognitionWorker(QThread):
         i = 1
         paths = []
         for board_img in boards_img:
-            board = Board(board_img)
-            sgf_file = 'board-{}.sgf'.format(str(i))
-            path = os.path.join(path_dir, sgf_file)
-            board.save_sgf(path)
-            paths.append(path)
-            self.send_board.emit(path, board_img)
+            try:
+                board = Board(board_img)
+                sgf_file = 'board-{}.sgf'.format(str(i))
+                path = os.path.join(path_dir, sgf_file)
+                board.save_sgf(path)
+                paths.append(path)
+                self.send_board.emit(path, board_img)
 
-            self.subprogress = (i + 1) / (total_boards + 1)
-            self.send_update('> Board {} saved'.format(i))
+                self.subprogress = (i + 1) / (total_boards + 1)
+                self.send_update('> Board {} saved'.format(i))
+
+            except Exception as e:
+                self.send_board.emit("", board_img)
+                self.subprogress = (i + 1) / (total_boards + 1)
+                self.send_update('> An error occurred while processing board {}'.format(i))
             i += 1
+
         return paths, boards_img
 
 
@@ -134,6 +141,8 @@ class MainWindow(Window):
 
         self.findChild(QtWidgets.QPushButton, "previous_button").setIcon(qta.icon('fa5s.angle-double-left'))
         self.findChild(QtWidgets.QPushButton, "next_button").setIcon(qta.icon('fa5s.angle-double-right'))
+
+        self.lock_open_sgf_button(True)
 
     def resizeEvent(self, event):
         result = super(Window, self).resizeEvent(event)
@@ -181,6 +190,9 @@ class MainWindow(Window):
     def lock_recognize_button(self, state):
         self.findChild(QtWidgets.QPushButton, "recognize").setEnabled(not state)
 
+    def lock_open_sgf_button(self, state):
+        self.findChild(QtWidgets.QPushButton, "open_sgf").setEnabled(not state)
+
     def update_preview_board_label(self):
         line = 'Доска {} из {}'.format(self.current_index + 1, self.n_boards)
         self.findChild(QtWidgets.QLabel, "label_board_index").setText(line)
@@ -215,7 +227,12 @@ class MainWindow(Window):
             return False
 
         self.current_index = index
-        self.sgfpainter.load_game(self.paths[index], update=True)
+        if self.paths[index] != "":
+            self.sgfpainter.load_game(self.paths[index], update=True)
+            self.lock_open_sgf_button(False)
+        else:
+            self.sgfpainter.load_empty()
+            self.lock_open_sgf_button(True)
         self.redraw_preview_image()
         self.update_preview_board_label()
         return True
