@@ -20,7 +20,7 @@ py -m virtualenv venv
 venv\Scripts\activate
 
 # Then for all platforms
-pip install -r requirements.txt
+pip install .
 pip install pyinstaller
 ```
 

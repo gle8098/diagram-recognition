@@ -9,6 +9,14 @@ setup(name='godr',
       },
       package_dir={'': 'src'},
       python_requires='>3.6',
+      install_requires=[
+          'matplotlib',
+          'opencv-python-headless',
+          'sgfmill',
+          'pyqt5',
+          'numpy',
+          'QtAwesome'
+      ],
       entry_points={
           'console_scripts': [
               'godr=godr.frontend.app_ui:main'
