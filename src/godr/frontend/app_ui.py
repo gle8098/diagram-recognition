@@ -9,13 +9,13 @@ import numpy as np
 from PyQt5 import uic, QtCore
 from PyQt5.QtCore import QObject, QThread
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette, QPainter
+from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette
 from PyQt5.QtWidgets import QFileDialog, QApplication
 
-from src import miscellaneous
-from src.board import Board
-from src.recognizer import Recognizer
-from src.sgfpainter import SgfPainter
+from godr.frontend import miscellaneous
+from godr.backend.board import Board
+from godr.backend.recognizer import Recognizer
+from godr.frontend.sgfpainter import SgfPainter
 
 
 class RecognitionWorker(QThread):
@@ -105,9 +105,12 @@ class RecognitionWorker(QThread):
 
 
 # Loads window layout
-app_dir = path.dirname(sys.argv[0])
+app_dir = path.dirname(__file__)
+print('App dir = {}'.format(app_dir))
 ui_dir = path.join(app_dir, "ui")
-Form, Window = uic.loadUiType(path.join(ui_dir, "window.ui"))
+import pkg_resources
+print('Name = {}'.format(__name__))
+Form, Window = uic.loadUiType(pkg_resources.resource_stream('godr.frontend.ui', "window.ui"))
 
 
 class MainWindow(Window):
@@ -255,7 +258,7 @@ class MainWindow(Window):
                 print("Could not open file \"{}\" because <<{}>>".format(filename, str(ex)))
 
 
-if __name__ == '__main__':
+def main():
     app = QApplication(sys.argv)
     window = MainWindow()
     form = Form()
@@ -272,3 +275,6 @@ if __name__ == '__main__':
         window.convert_to_sgf()
 
     app.exec_()
+
+if __name__ == '__main__':
+    main()

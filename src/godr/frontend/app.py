@@ -1,7 +1,7 @@
 import cv2
 import glob
 import os.path
-from src.board import Board
+from godr.backend.board import Board
 
 if __name__ == '__main__':
     print('Enter pathname')
