@@ -50,6 +50,7 @@ class RecognitionWorker(QThread):
     def run(self):
         if not self.files:
             self.update_ui.emit(0, 'No files selected')
+            self.done.emit()
             return
 
         print('Recognising {} files'.format(len(self.files)))
