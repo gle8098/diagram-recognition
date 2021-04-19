@@ -3,6 +3,7 @@ import numpy as np
 from collections import defaultdict
 
 from src.recognizer_consts import *
+from src.nn import StoneRecognizer
 
 
 class Recognizer:
@@ -16,14 +17,14 @@ class Recognizer:
         pass
 
     def __init__(self):
-        pass
+        self.nn_stone_recognizer = StoneRecognizer()
 
-    def recognize(self, img):
-        if img is None:
+    def recognize(self, board_img):
+        if board_img is None:
             raise self.EmptyImageError()
-        img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        board_img_gray = cv2.cvtColor(board_img, cv2.COLOR_BGR2GRAY)
 
-        v_lines, h_lines = self.lines_recognition(img_gray)
+        v_lines, h_lines = self.lines_recognition(board_img_gray)
         if len(v_lines) == 0 or len(h_lines) == 0:
             raise self.NoBoardError()
 
@@ -31,32 +32,30 @@ class Recognizer:
         intersections = self.find_intersections(v_lines, h_lines)
         cell_size = self.get_cell_size(v_lines, h_lines)
         edges = self.find_edges(v_lines, h_lines, cell_size)
-        stones, radius = self.stones_recognition(img_gray, cell_size, intersections)
-
-        if len(stones) == 0:
-            raise self.NoBoardError()
-        white_stones, black_stones = self.colorize(img_gray, stones, radius)
+        white_stones, black_stones = self.nn_stone_recognizer.recognize(board_img_gray, cell_size, intersections)
 
         if len(white_stones) == 0 and len(black_stones) == 0:
             raise self.NoBoardError()
-
-        return intersections, white_stones, black_stones, radius, x_size, y_size, edges
+                                                        ##todo: remove radius?
+        return intersections, white_stones, black_stones, cell_size//2, x_size, y_size, edges
 
     def get_edges(self, img_gray):
         return cv2.Canny(img_gray, CANNY_THRESHOLD1, CANNY_THRESHOLD2)
 
-    def all_lines(self, img_gray, hough_threshold):
+    def all_lines(self, img_gray, hough_threshold, gap=0):
         edges = self.get_edges(img_gray)
         size = min(img_gray.shape[0:2])
+        if gap == 0:
+            gap = size
         lines = cv2.HoughLinesP(edges, rho=HOUGH_RHO, theta=HOUGH_THETA, threshold=hough_threshold,
-                                minLineLength=size * 0.75, maxLineGap=size)  ### ?
+                                minLineLength=size * MIN_LINE_LENGHT_COEFF, maxLineGap=gap)
         if lines is None:
             return None
         return np.reshape(lines, (lines.shape[0], lines.shape[2]))
 
-    def get_verticals_horizontals(self, img_gray, hough_threshold):
+    def get_verticals_horizontals(self, img_gray, hough_threshold, gap=0):
         # Find all lines
-        lines = self.all_lines(img_gray, hough_threshold)
+        lines = self.all_lines(img_gray, hough_threshold, gap)
         if (lines is None):
             return np.array([]), np.array([])
         # Divide the lines into verticals and horizontals
@@ -111,13 +110,9 @@ class Recognizer:
 
     def lines_recognition(self, img_gray):
 
-        unclear_v_lines, unclear_h_lines = self.get_verticals_horizontals(img_gray, HOUGH_LOW_THRESHOLD)
-        if len(unclear_v_lines) == 0 or len(unclear_h_lines) == 0:
-            return [], []
-
         hough_threshold = min(img_gray.shape[0:2])
-        cell_size = 1
-        while hough_threshold > HOUGH_THRESHOLD_STEP:
+        cell_size = 0
+        while hough_threshold > HOUGH_LOW_THRESHOLD:
             clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, hough_threshold)
             if (len(clear_v_lines) > 3) and (len(clear_h_lines) > 3):
                 dists_x = np.diff(clear_v_lines[:, 0])
@@ -130,9 +125,11 @@ class Recognizer:
                     cell_size = np.mean(dists[np.round(dists / cell_size) == 1])
                     break
             hough_threshold -= HOUGH_THRESHOLD_STEP
-        while hough_threshold > HOUGH_THRESHOLD_STEP:
+        if cell_size == 0:
+            return [], []
+        while hough_threshold > HOUGH_LOW_THRESHOLD:
             hough_threshold -= HOUGH_THRESHOLD_STEP
-            clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, hough_threshold)
+            clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, hough_threshold, 1.5*cell_size)
             if (len(clear_v_lines) <= 1) or (len(clear_h_lines) <= 1):
                 hough_threshold += HOUGH_THRESHOLD_STEP
                 break
@@ -146,23 +143,17 @@ class Recognizer:
                 hough_threshold += HOUGH_THRESHOLD_STEP
                 break
             cell_size = np.mean(dists[ints == 1])
-        clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, hough_threshold)
+        clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, hough_threshold, 1.5*cell_size)
         dists_x = np.diff(clear_v_lines[:, 0])
         dists_y = np.diff(clear_h_lines[:, 1])
         dists = np.concatenate([dists_x, dists_y])
         cell_size = np.mean(dists[np.round(dists / cell_size) == 1])
         # Add unclear lines
         # possible bugs!
-
-        x_min = min(unclear_v_lines[0][0], clear_v_lines[0][0])
-        y_min = min(unclear_h_lines[0][1], clear_h_lines[0][1])
-        x_max = max(unclear_v_lines[-1][0], clear_v_lines[-1][0])
-        y_max = max(unclear_h_lines[-1][1], clear_h_lines[-1][1])
-
-        x_min_line = np.mean(clear_h_lines[:, 0])
-        x_max_line = np.mean(clear_h_lines[:, 2])
-        y_min_line = np.mean(clear_v_lines[:, 1])
-        y_max_line = np.mean(clear_v_lines[:, 3])
+        x_min = np.mean(clear_h_lines[:, 0])
+        x_max = np.mean(clear_h_lines[:, 2])
+        y_min = np.mean(clear_v_lines[:, 1])
+        y_max = np.mean(clear_v_lines[:, 3])
 
         v_lines = []
         xs = np.concatenate([[x_min], clear_v_lines[:, 0], [x_max]])
@@ -173,12 +164,12 @@ class Recognizer:
         for i in range(1, xs.size):
             for ind in range(1, num_lines[i - 1] + 1):
                 if i == xs.size - 1:
-                    x = xs[i - 1] + np.round(ind * dists[-1] / num_lines[-1])
+                    x = xs[i - 1] + np.round(ind * cell_size)
                 elif i == 1:
-                    x = xs[i] - np.round((num_lines[0] + 1 - ind) * dists[0] / num_lines[0])
+                    x = xs[i] - np.round((num_lines[0] + 1 - ind) * cell_size)
                 else:
                     x = xs[i] - np.round((num_lines[i - 1] + 1 - ind) * dists[i - 1] / (num_lines[i - 1] + 1))
-                new_line = [x, y_min_line, x, y_max_line]
+                new_line = [x, y_min, x, y_max]
                 v_lines.append(new_line)
             if i != xs.size - 1:
                 v_lines.append(clear_v_lines[i - 1])
@@ -191,12 +182,12 @@ class Recognizer:
         for i in range(1, ys.size):
             for ind in range(1, num_lines[i - 1] + 1):
                 if i == ys.size - 1:
-                    y = ys[i - 1] + np.round(ind * dists[-1] / num_lines[-1])
+                    y = ys[i - 1] + np.round(ind * cell_size)
                 elif i == 1:
-                    y = ys[i] - np.round((num_lines[0] + 1 - ind) * dists[0] / num_lines[0])
+                    y = ys[i] - np.round((num_lines[0] + 1 - ind) * cell_size)
                 else:
                     y = ys[i] - np.round((num_lines[i - 1] + 1 - ind) * dists[i - 1] / (num_lines[i - 1] + 1))
-                new_line = [x_min_line, y, x_max_line, y]
+                new_line = [x_min, y, x_max, y]
                 h_lines.append(new_line)
             if i != ys.size - 1:
                 h_lines.append(clear_h_lines[i - 1])
