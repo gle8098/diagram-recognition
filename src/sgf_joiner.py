@@ -4,7 +4,7 @@ import os
 from typing import List, Dict
 import logging
 
-LOG = logging.getLogger(__name__)
+logging.basicConfig(format='%(asctime)s - (%(name)s) [%(levelname)s] - %(message)s', level=logging.INFO)
 
 
 class SGFJoiner:
@@ -37,11 +37,11 @@ class SGFJoiner:
                 with open(path) as sgf_file:
                     games.append(Sgf_game.from_string(sgf_file.read()))
             except FileNotFoundError:
-                LOG.error("Skipping, no file found: {}".format(path))
+                logging.error("Skipping, no file found: {}".format(path))
             except ValueError:
-                LOG.error("Skipping, not a valid sgf: {}".format(path))
+                logging.error("Skipping, not a valid sgf: {}".format(path))
 
-        LOG.info("Read {} boards for joining".format(len(games)))
+        logging.info("Read {} boards for joining".format(len(games)))
         return self.join_games(games)
 
     def join_dir(self, dirpath: str):
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     parser.add_argument("--outdir", dest="outdir", help="Path to directory to store results or printed to stdout")
 
     args = parser.parse_args()
-    LOG.info("Running with arguments: {}".format(args))
+    logging.info("Running with arguments: {}".format(args))
     joiner = SGFJoiner()
     joiner.join_dir(args.dir) if args.dir else joiner.join_files(args.files)
     result = joiner.serialise()
