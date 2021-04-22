@@ -60,7 +60,7 @@ class SGFJoiner:
             cls._cross_game_node_reparent(child, new_node)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--dir", dest="dir", help="Path to directory with sgf files")
@@ -78,3 +78,7 @@ if __name__ == "__main__":
                 fh.write(c)
     else:
         print(result)
+
+
+if __name__ == "__main__":
+    main()

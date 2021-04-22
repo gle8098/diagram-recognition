@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 from typing import Dict
-from src.sgf_joiner import SGFJoiner
+from godr.sgf_joiner import SGFJoiner
 from sgfmill.sgf import Sgf_game
 import os
 
@@ -41,7 +41,7 @@ class MyTestCase(unittest.TestCase):
         r = joiner.join_files([])
         self.assertDictEqual({}, r)
 
-    @patch("src.sgf_joiner.os.listdir", return_value=['19x19_1.sgf', '19x19_2.sgf', '19x19_3.sgf', '9x9_1.sgf', '9x9_2.sgf', '9x9_3.sgf', 'mytext.txt.txt'])
+    @patch("godr.sgf_joiner.os.listdir", return_value=['19x19_1.sgf', '19x19_2.sgf', '19x19_3.sgf', '9x9_1.sgf', '9x9_2.sgf', '9x9_3.sgf', 'mytext.txt.txt'])
     def test_dir_joiner(self, mocked_listdir):
         joiner = SGFJoiner()
         r = joiner.join_dir(self.dir)
