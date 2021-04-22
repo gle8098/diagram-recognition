@@ -1,8 +1,6 @@
-import cv2
-import numpy as np
 from collections import defaultdict
 
-from src.recognizer_consts import *
+from godr.backend.recognizer_consts import *
 
 
 class Recognizer:
