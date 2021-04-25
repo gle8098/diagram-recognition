@@ -1,8 +1,8 @@
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-from src.stone import Stone
-from src.recognizer import Recognizer
+from godr.backend.stone import Stone
+from godr.backend.recognizer import Recognizer
 import copy
 from sgfmill import sgf, boards, sgf_moves
 

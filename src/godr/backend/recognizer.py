@@ -1,9 +1,7 @@
-import cv2
-import numpy as np
 from collections import defaultdict
 
-from src.recognizer_consts import *
-from src.nn import StoneRecognizer
+from godr.backend.recognizer_consts import *
+from godr.backend.nn import StoneRecognizer
 
 
 class Recognizer:
@@ -39,7 +37,6 @@ class Recognizer:
             raise self.NoBoardError()
 
         edges = self.__find_edges(v_lines, h_lines, white_stones + black_stones, cell_size)
-        print(edges)
         return white_stones, black_stones, x_size, y_size, edges
 
     def split_into_boards(self, page_img):
@@ -277,7 +274,7 @@ class Recognizer:
 
         def is_edge(edge_coord, line_ends, flag):
             diff = edge_coord - line_ends if flag else line_ends - edge_coord
-            return np.sum(diff > cell_size * MIN_EDGE_COEFF) < np.ceil(len(line_ends) / 10)
+            return np.sum(diff > cell_size * MIN_EDGE_COEFF) < np.ceil(len(line_ends) / 5)
 
         up_edge = is_edge(h_lines[0][1], v_lines[up_line_free, 1], True)
         down_edge = is_edge(h_lines[-1][1], v_lines[down_line_free, 3], False)

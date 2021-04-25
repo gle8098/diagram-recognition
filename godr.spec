@@ -3,10 +3,10 @@
 block_cipher = None
 
 
-a = Analysis(['app_ui.py'],
+a = Analysis(['src/godr/frontend/app_ui.py'],
              pathex=[],
              binaries=[],
-             datas=[('ui', 'ui')],
+             datas=[('src/godr/frontend/ui', 'godr/frontend/ui'), ('src/godr/backend/models', 'godr/backend/models')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -21,7 +21,7 @@ exe = EXE(pyz,
           a.scripts,
           [],
           exclude_binaries=True,
-          name='godr',
+          name='godr.app',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,

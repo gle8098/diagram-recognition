@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import onnxruntime
+import pkg_resources
 
 
 def to_numpy(tensor):
@@ -9,7 +10,8 @@ def to_numpy(tensor):
 class StoneRecognizer():
 
     def __init__(self):
-        self.model = onnxruntime.InferenceSession("src/models/model-2.onnx")
+        bytes_model = bytes(pkg_resources.resource_string('godr.backend.models', "model-2.onnx"))
+        self.model = onnxruntime.InferenceSession(bytes_model)
 
     def transform(self, img):
         img = img.astype(np.float32) / 255
