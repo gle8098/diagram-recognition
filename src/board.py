@@ -14,12 +14,10 @@ class Board:
         recognizer = Recognizer()
         debug = True
         if debug:
-            self.intersections, white_stones, black_stones, self.radius, x_size, y_size, edges = recognizer.recognize(
-                img)
+            white_stones, black_stones,  x_size, y_size, edges = recognizer.recognize(img)
         else:
             try:
-                self.intersections, white_stones, black_stones, self.radius, x_size, y_size, edges = recognizer.recognize(
-                    img)
+                white_stones, black_stones,  x_size, y_size, edges = recognizer.recognize(img)
             except:
                 return
         self.img = img
@@ -84,19 +82,15 @@ class Board:
                 up_edge_size = 0
 
         for stone in white_stones:
-            global_x = stone[0]
-            global_y = stone[1]
-            local_x, local_y = self.find_stone_in_intersections(stone)
+            local_x, local_y = stone
             local_x += left_edge_size
             local_y += up_edge_size
-            self.white_stones.append(Stone(local_x, local_y, global_x, global_y))
+            self.white_stones.append(Stone(local_x, local_y, 0, 0))
         for stone in black_stones:
-            global_x = stone[0]
-            global_y = stone[1]
-            local_x, local_y = self.find_stone_in_intersections(stone)
+            local_x, local_y = stone
             local_x += left_edge_size
             local_y += up_edge_size
-            self.black_stones.append(Stone(local_x, local_y, global_x, global_y))
+            self.black_stones.append(Stone(local_x, local_y,  0, 0))
 
     def get_white_coordinates(self):
         for stone in self.white_stones:

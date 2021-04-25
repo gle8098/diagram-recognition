@@ -25,8 +25,8 @@ class Recognizer:
     def recognize(self, board_img):
         if board_img is None:
             raise self.EmptyImageError()
-        board_img_gray = cv2.cvtColor(board_img, cv2.COLOR_BGR2GRAY)
 
+        board_img_gray = cv2.cvtColor(board_img, cv2.COLOR_BGR2GRAY)
         v_lines, h_lines = self.__lines_recognition(board_img_gray)
         if len(v_lines) == 0 or len(h_lines) == 0:
             raise self.NoBoardError()
@@ -34,13 +34,13 @@ class Recognizer:
         x_size, y_size = v_lines.shape[0], h_lines.shape[0]
         intersections = self.__find_intersections(v_lines, h_lines)
         cell_size = self.__get_cell_size(v_lines, h_lines)
-        edges = self.__find_edges(v_lines, h_lines, cell_size)
         white_stones, black_stones = self.nn_stone_recognizer.recognize(board_img_gray, cell_size, intersections)
-
         if len(white_stones) == 0 and len(black_stones) == 0:
             raise self.NoBoardError()
-                                                        ##todo: remove radius?
-        return intersections, white_stones, black_stones, cell_size//2, x_size, y_size, edges
+
+        edges = self.__find_edges(v_lines, h_lines, white_stones + black_stones, cell_size)
+        print(edges)
+        return white_stones, black_stones, x_size, y_size, edges
 
     def split_into_boards(self, page_img):
         orig_size = min(page_img.shape[0:2])
@@ -254,19 +254,36 @@ class Recognizer:
     def __find_intersections(self, v_lines, h_lines):
         return np.array(np.meshgrid(v_lines[:, 0], h_lines[:, 1])).T
 
-    def __find_edges(self, v_lines, h_lines, cell_size):
+    def __find_edges(self, v_lines, h_lines, stones, cell_size):
 
-        up_line = h_lines[0]
-        up_edge = np.sum(up_line[1] - v_lines[:, 1] > cell_size * MIN_EDGE_COEFF) < (v_lines.shape[0] / 1.5)
+        up_line_stones = []
+        down_line_stones = []
+        left_line_stones = []
+        right_line_stones = []
+        for stone in stones:
+            x, y = stone
+            if y == 0:
+                up_line_stones.append(x)
+            if y == len(h_lines) - 1:
+                down_line_stones.append(x)
+            if x == 0:
+                left_line_stones.append(y)
+            if x == len(v_lines) - 1:
+                right_line_stones.append(y)
+        up_line_free = np.delete(np.arange(len(v_lines)), up_line_stones)
+        down_line_free = np.delete(np.arange(len(v_lines)), down_line_stones)
+        left_line_free = np.delete(np.arange(len(h_lines)), left_line_stones)
+        right_line_free = np.delete(np.arange(len(h_lines)), right_line_stones)
 
-        down_line = h_lines[-1]
-        down_edge = np.sum(v_lines[:, 3] - down_line[1] > cell_size * MIN_EDGE_COEFF) < (v_lines.shape[0] / 1.5)
+        def is_edge(edge_coord, line_ends, flag):
+            diff = edge_coord - line_ends if flag else line_ends - edge_coord
+            return np.sum(diff > cell_size * MIN_EDGE_COEFF) < np.ceil(len(line_ends) / 10)
 
-        left_line = v_lines[0]
-        left_edge = np.sum(left_line[0] - h_lines[:, 0] > cell_size * MIN_EDGE_COEFF) < (h_lines.shape[0] / 1.5)
+        up_edge = is_edge(h_lines[0][1], v_lines[up_line_free, 1], True)
+        down_edge = is_edge(h_lines[-1][1], v_lines[down_line_free, 3], False)
+        left_edge = is_edge(v_lines[0][0], h_lines[left_line_free, 0], True)
+        right_edge = is_edge(v_lines[-1][0], h_lines[right_line_free, 2], False)
 
-        right_line = v_lines[-1]
-        right_edge = np.sum(h_lines[:, 2] - right_line[0] > cell_size * MIN_EDGE_COEFF) < (h_lines.shape[0] / 1.5)
         return up_edge, down_edge, left_edge, right_edge
 
     def __find_circles(self, img_gray, param2, min_dist_coeff, min_r_coeff, max_r_coeff, cell_size):
