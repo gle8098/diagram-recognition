@@ -17,10 +17,12 @@ setup(name='godr',
           'numpy',
           'QtAwesome',
           'PyMuPDF',
-          'pagerange'
+          'pagerange',
+          'onnxruntime'
       ],
       entry_points={
           'console_scripts': [
-              'godr=godr.frontend.app_ui:main'
+              'godr=godr.frontend.app_ui:main',
+              'sgf_joiner=godr.sgf_joiner:main'
           ]
       })
