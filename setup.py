@@ -16,6 +16,8 @@ setup(name='godr',
           'pyqt5',
           'numpy',
           'QtAwesome',
+          'PyMuPDF',
+          'pagerange',
           'onnxruntime'
       ],
       entry_points={

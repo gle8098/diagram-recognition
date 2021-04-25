@@ -3,6 +3,7 @@ import os
 import sys
 
 import pkg_resources
+import fitz
 import qtawesome as qta
 from PyQt5 import QtWidgets
 from PyQt5 import uic, QtCore
@@ -10,7 +11,7 @@ from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette
 from PyQt5.QtWidgets import QFileDialog, QApplication
 
 from godr.frontend import miscellaneous
-from godr.frontend.recognition_worker import RecognitionWorker
+from godr.frontend.recognition_worker import RecognitionWorker, CustomDialog
 from godr.frontend.sgfpainter import SgfPainter
 
 
@@ -58,7 +59,7 @@ class MainWindow(QtWidgets.QMainWindow):
         return result
 
     def select_files(self):
-        type_filter = "PNG, JPEG (*.png *.jpg)"
+        type_filter = "All supported formats (*.png *.jpg *.jpeg *.pdf)"
         dialog = QFileDialog()
         dialog.setFileMode(QFileDialog.ExistingFiles)
         names, _ = dialog.getOpenFileNames(self, caption="Open files", directory=os.getcwd(), filter=type_filter)
@@ -69,7 +70,9 @@ class MainWindow(QtWidgets.QMainWindow):
         print('Files are {}'.format(self.selected_files))
         self.lock_recognize_button(True)
 
-        self.recognition_worker = RecognitionWorker(self.selected_files)
+        ranges = self.collect_ranges_for_files()
+
+        self.recognition_worker = RecognitionWorker(self.selected_files, ranges)
         self.recognition_worker.update_ui.connect(self.update_progress_bar)
         self.recognition_worker.send_board.connect(self.accept_new_board)
         self.recognition_worker.done.connect(lambda: self.lock_recognize_button(False))
@@ -161,6 +164,19 @@ class MainWindow(QtWidgets.QMainWindow):
                 miscellaneous.open_file_in_external_app(filename)
             except Exception as ex:
                 print("Could not open file \"{}\" because <<{}>>".format(filename, str(ex)))
+
+    def collect_ranges_for_files(self):
+        ranges = []
+        for file in self.selected_files:
+            if not file.endswith('.pdf'):
+                ranges.append(None)
+                continue
+
+            doc = fitz.Document(file)
+            dlg = CustomDialog(file, doc.page_count)
+            dlg.exec_()
+            ranges.append(dlg.get_range())
+        return ranges
 
 
 def main():
