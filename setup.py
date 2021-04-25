@@ -15,7 +15,8 @@ setup(name='godr',
           'sgfmill',
           'pyqt5',
           'numpy',
-          'QtAwesome'
+          'QtAwesome',
+          'onnxruntime'
       ],
       entry_points={
           'console_scripts': [

@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 from godr.backend.recognizer_consts import *
+from godr.backend.nn import StoneRecognizer
 
 
 class Recognizer:
@@ -13,48 +14,98 @@ class Recognizer:
     class NoBoardError(RecognitionError):
         pass
 
-    def __init__(self):
+    class EmptyBoardsError(RecognitionError):
         pass
 
-    def recognize(self, img):
-        if img is None:
-            raise self.EmptyImageError()
-        img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    def __init__(self):
+        self.nn_stone_recognizer = StoneRecognizer()
 
-        v_lines, h_lines = self.lines_recognition(img_gray)
+    def recognize(self, board_img):
+        if board_img is None:
+            raise self.EmptyImageError()
+
+        board_img_gray = cv2.cvtColor(board_img, cv2.COLOR_BGR2GRAY)
+        v_lines, h_lines = self.__lines_recognition(board_img_gray)
         if len(v_lines) == 0 or len(h_lines) == 0:
             raise self.NoBoardError()
 
         x_size, y_size = v_lines.shape[0], h_lines.shape[0]
-        intersections = self.find_intersections(v_lines, h_lines)
-        cell_size = self.get_cell_size(v_lines, h_lines)
-        edges = self.find_edges(v_lines, h_lines, cell_size)
-        stones, radius = self.stones_recognition(img_gray, cell_size, intersections)
-
-        if len(stones) == 0:
-            raise self.NoBoardError()
-        white_stones, black_stones = self.colorize(img_gray, stones, radius)
-
+        intersections = self.__find_intersections(v_lines, h_lines)
+        cell_size = self.__get_cell_size(v_lines, h_lines)
+        white_stones, black_stones = self.nn_stone_recognizer.recognize(board_img_gray, cell_size, intersections)
         if len(white_stones) == 0 and len(black_stones) == 0:
             raise self.NoBoardError()
 
-        return intersections, white_stones, black_stones, radius, x_size, y_size, edges
+        edges = self.__find_edges(v_lines, h_lines, white_stones + black_stones, cell_size)
+        return white_stones, black_stones, x_size, y_size, edges
 
-    def get_edges(self, img_gray):
+    def split_into_boards(self, page_img):
+        orig_size = min(page_img.shape[0:2])
+        if orig_size > 2000:
+            scale = 2000 / orig_size
+        else:
+            scale = 1
+        # For better connectivity and higher speed
+        page_img_crop = cv2.resize(page_img, (0,0), fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+        size = min(page_img_crop.shape[0:2])
+        page_img_gray = cv2.cvtColor(page_img_crop, cv2.COLOR_BGR2GRAY)
+        edges = self.__get_edges(page_img_gray)
+        # For better connectivity
+        edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, np.ones((5, 5)))
+        min_size = (size * MIN_BOARD_SIZE_COEFF)
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # Filter contours (big and long enough)
+        boards = []
+        extra_size = orig_size
+        for contour in contours:
+            perimeter = cv2.arcLength(contour, True)
+            area = cv2.contourArea(contour)
+            if perimeter > 4 * min_size and area > min_size ** 2:
+                x, y, w, h = cv2.boundingRect(contour)
+                extra_size = min(w, h, extra_size)
+                boards.append((x, y, w, h))
+        if len(boards) == 0:
+            raise self.EmptyBoardsError()
+        extra_size //= 20
+        boards.sort(key=lambda coords: coords[1])
+        new_line = np.diff(boards, axis=0)[:, 1] > extra_size
+        num_lines = np.sum(new_line) + 1
+        board_lines = [[] for i in range(num_lines)]
+        line_ind = 0
+        board_lines[line_ind].append(0)
+        for i in range(1, len(boards)):
+            if new_line[i - 1]:
+                line_ind += 1
+            board_lines[line_ind].append(i)
+        for board_line in board_lines:
+            board_line.sort(key=lambda ind: boards[ind][0])
+        boards_order = np.reshape(board_lines, -1)
+        boards = np.array(boards)[boards_order]
+        board_images = []
+        for board in boards:
+            x, y, w, h = board
+            board_img = page_img_crop[max(y - extra_size, 0): min(y + h + extra_size, page_img.shape[0]),
+                                      max(x - extra_size, 0): min(x + w + extra_size, page_img.shape[1])]
+            board_images.append(board_img)
+        return board_images
+
+    def __get_edges(self, img_gray):
         return cv2.Canny(img_gray, CANNY_THRESHOLD1, CANNY_THRESHOLD2)
 
-    def all_lines(self, img_gray, hough_threshold):
-        edges = self.get_edges(img_gray)
+    def __all_lines(self, img_gray, hough_threshold, gap=0):
+        edges = self.__get_edges(img_gray)
         size = min(img_gray.shape[0:2])
+        if gap == 0:
+            gap = size
         lines = cv2.HoughLinesP(edges, rho=HOUGH_RHO, theta=HOUGH_THETA, threshold=hough_threshold,
-                                minLineLength=size * 0.75, maxLineGap=size)  ### ?
+                                minLineLength=size * MIN_LINE_LENGHT_COEFF, maxLineGap=gap)
         if lines is None:
             return None
         return np.reshape(lines, (lines.shape[0], lines.shape[2]))
 
-    def get_verticals_horizontals(self, img_gray, hough_threshold):
+    def __get_verticals_horizontals(self, img_gray, hough_threshold, gap=0):
         # Find all lines
-        lines = self.all_lines(img_gray, hough_threshold)
+        lines = self.__all_lines(img_gray, hough_threshold, gap)
         if (lines is None):
             return np.array([]), np.array([])
         # Divide the lines into verticals and horizontals
@@ -80,10 +131,10 @@ class Recognizer:
                     h_lines.append(line)
         v_lines = np.array(sorted(v_lines, key=lambda line: line[0]))
         h_lines = np.array(sorted(h_lines, key=lambda line: line[1]))
-        return self.merge_lines(v_lines, True), self.merge_lines(h_lines, False)
+        return self.__merge_lines(v_lines, True), self.__merge_lines(h_lines, False)
 
     # IMPROVE!
-    def merge_lines(self, lines, is_vertical):
+    def __merge_lines(self, lines, is_vertical):
 
         if lines.shape[0] == 0:
             return np.array([])
@@ -107,16 +158,12 @@ class Recognizer:
             i += 1
         return np.array(merged_lines)
 
-    def lines_recognition(self, img_gray):
-
-        unclear_v_lines, unclear_h_lines = self.get_verticals_horizontals(img_gray, HOUGH_LOW_THRESHOLD)
-        if len(unclear_v_lines) == 0 or len(unclear_h_lines) == 0:
-            return [], []
+    def __lines_recognition(self, img_gray):
 
         hough_threshold = min(img_gray.shape[0:2])
-        cell_size = 1
-        while hough_threshold > HOUGH_THRESHOLD_STEP:
-            clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, hough_threshold)
+        cell_size = 0
+        while hough_threshold > HOUGH_LOW_THRESHOLD:
+            clear_v_lines, clear_h_lines = self.__get_verticals_horizontals(img_gray, hough_threshold)
             if (len(clear_v_lines) > 3) and (len(clear_h_lines) > 3):
                 dists_x = np.diff(clear_v_lines[:, 0])
                 dists_y = np.diff(clear_h_lines[:, 1])
@@ -128,9 +175,11 @@ class Recognizer:
                     cell_size = np.mean(dists[np.round(dists / cell_size) == 1])
                     break
             hough_threshold -= HOUGH_THRESHOLD_STEP
-        while hough_threshold > HOUGH_THRESHOLD_STEP:
+        if cell_size == 0:
+            return [], []
+        while hough_threshold > HOUGH_LOW_THRESHOLD:
             hough_threshold -= HOUGH_THRESHOLD_STEP
-            clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, hough_threshold)
+            clear_v_lines, clear_h_lines = self.__get_verticals_horizontals(img_gray, hough_threshold, 1.5 * cell_size)
             if (len(clear_v_lines) <= 1) or (len(clear_h_lines) <= 1):
                 hough_threshold += HOUGH_THRESHOLD_STEP
                 break
@@ -139,28 +188,23 @@ class Recognizer:
             dists = np.concatenate([dists_x, dists_y])
             fracs = np.modf(dists / cell_size)[0]
             ints = np.round(dists / cell_size)
-            if np.any(np.logical_and(fracs < 0.75, fracs > 0.25)) or \
-                    np.any(ints == 0):
+            err = 0.9 - 0.05 * ints
+            err[ints >= 7] = 0.55
+            if np.any(np.logical_and(fracs < err, fracs > 1 - err)):
                 hough_threshold += HOUGH_THRESHOLD_STEP
                 break
             cell_size = np.mean(dists[ints == 1])
-        clear_v_lines, clear_h_lines = self.get_verticals_horizontals(img_gray, hough_threshold)
+        clear_v_lines, clear_h_lines = self.__get_verticals_horizontals(img_gray, hough_threshold, 1.5 * cell_size)
         dists_x = np.diff(clear_v_lines[:, 0])
         dists_y = np.diff(clear_h_lines[:, 1])
         dists = np.concatenate([dists_x, dists_y])
         cell_size = np.mean(dists[np.round(dists / cell_size) == 1])
         # Add unclear lines
         # possible bugs!
-
-        x_min = min(unclear_v_lines[0][0], clear_v_lines[0][0])
-        y_min = min(unclear_h_lines[0][1], clear_h_lines[0][1])
-        x_max = max(unclear_v_lines[-1][0], clear_v_lines[-1][0])
-        y_max = max(unclear_h_lines[-1][1], clear_h_lines[-1][1])
-
-        x_min_line = np.mean(clear_h_lines[:, 0])
-        x_max_line = np.mean(clear_h_lines[:, 2])
-        y_min_line = np.mean(clear_v_lines[:, 1])
-        y_max_line = np.mean(clear_v_lines[:, 3])
+        x_min = np.mean(clear_h_lines[:, 0])
+        x_max = np.mean(clear_h_lines[:, 2])
+        y_min = np.mean(clear_v_lines[:, 1])
+        y_max = np.mean(clear_v_lines[:, 3])
 
         v_lines = []
         xs = np.concatenate([[x_min], clear_v_lines[:, 0], [x_max]])
@@ -171,12 +215,12 @@ class Recognizer:
         for i in range(1, xs.size):
             for ind in range(1, num_lines[i - 1] + 1):
                 if i == xs.size - 1:
-                    x = xs[i - 1] + np.round(ind * dists[-1] / num_lines[-1])
+                    x = xs[i - 1] + np.round(ind * cell_size)
                 elif i == 1:
-                    x = xs[i] - np.round((num_lines[0] + 1 - ind) * dists[0] / num_lines[0])
+                    x = xs[i] - np.round((num_lines[0] + 1 - ind) * cell_size)
                 else:
                     x = xs[i] - np.round((num_lines[i - 1] + 1 - ind) * dists[i - 1] / (num_lines[i - 1] + 1))
-                new_line = [x, y_min_line, x, y_max_line]
+                new_line = [x, y_min, x, y_max]
                 v_lines.append(new_line)
             if i != xs.size - 1:
                 v_lines.append(clear_v_lines[i - 1])
@@ -189,40 +233,57 @@ class Recognizer:
         for i in range(1, ys.size):
             for ind in range(1, num_lines[i - 1] + 1):
                 if i == ys.size - 1:
-                    y = ys[i - 1] + np.round(ind * dists[-1] / num_lines[-1])
+                    y = ys[i - 1] + np.round(ind * cell_size)
                 elif i == 1:
-                    y = ys[i] - np.round((num_lines[0] + 1 - ind) * dists[0] / num_lines[0])
+                    y = ys[i] - np.round((num_lines[0] + 1 - ind) * cell_size)
                 else:
                     y = ys[i] - np.round((num_lines[i - 1] + 1 - ind) * dists[i - 1] / (num_lines[i - 1] + 1))
-                new_line = [x_min_line, y, x_max_line, y]
+                new_line = [x_min, y, x_max, y]
                 h_lines.append(new_line)
             if i != ys.size - 1:
                 h_lines.append(clear_h_lines[i - 1])
         return np.array(v_lines).astype(int), np.array(h_lines).astype(int)
 
-    def get_cell_size(self, v_lines, h_lines):
+    def __get_cell_size(self, v_lines, h_lines):
         return round(np.mean([round(np.ptp(v_lines[:, 0]) / (v_lines.shape[0] - 1)),
                               round(np.ptp(h_lines[:, 1]) / (h_lines.shape[0] - 1))]))
 
-    def find_intersections(self, v_lines, h_lines):
+    def __find_intersections(self, v_lines, h_lines):
         return np.array(np.meshgrid(v_lines[:, 0], h_lines[:, 1])).T
 
-    def find_edges(self, v_lines, h_lines, cell_size):
+    def __find_edges(self, v_lines, h_lines, stones, cell_size):
 
-        up_line = h_lines[0]
-        up_edge = np.sum(up_line[1] - v_lines[:, 1] > cell_size * MIN_EDGE_COEFF) < (v_lines.shape[0] / 1.5)
+        up_line_stones = []
+        down_line_stones = []
+        left_line_stones = []
+        right_line_stones = []
+        for stone in stones:
+            x, y = stone
+            if y == 0:
+                up_line_stones.append(x)
+            if y == len(h_lines) - 1:
+                down_line_stones.append(x)
+            if x == 0:
+                left_line_stones.append(y)
+            if x == len(v_lines) - 1:
+                right_line_stones.append(y)
+        up_line_free = np.delete(np.arange(len(v_lines)), up_line_stones)
+        down_line_free = np.delete(np.arange(len(v_lines)), down_line_stones)
+        left_line_free = np.delete(np.arange(len(h_lines)), left_line_stones)
+        right_line_free = np.delete(np.arange(len(h_lines)), right_line_stones)
 
-        down_line = h_lines[-1]
-        down_edge = np.sum(v_lines[:, 3] - down_line[1] > cell_size * MIN_EDGE_COEFF) < (v_lines.shape[0] / 1.5)
+        def is_edge(edge_coord, line_ends, flag):
+            diff = edge_coord - line_ends if flag else line_ends - edge_coord
+            return np.sum(diff > cell_size * MIN_EDGE_COEFF) < np.ceil(len(line_ends) / 5)
 
-        left_line = v_lines[0]
-        left_edge = np.sum(left_line[0] - h_lines[:, 0] > cell_size * MIN_EDGE_COEFF) < (h_lines.shape[0] / 1.5)
+        up_edge = is_edge(h_lines[0][1], v_lines[up_line_free, 1], True)
+        down_edge = is_edge(h_lines[-1][1], v_lines[down_line_free, 3], False)
+        left_edge = is_edge(v_lines[0][0], h_lines[left_line_free, 0], True)
+        right_edge = is_edge(v_lines[-1][0], h_lines[right_line_free, 2], False)
 
-        right_line = v_lines[-1]
-        right_edge = np.sum(h_lines[:, 2] - right_line[0] > cell_size * MIN_EDGE_COEFF) < (h_lines.shape[0] / 1.5)
         return up_edge, down_edge, left_edge, right_edge
 
-    def find_circles(self, img_gray, param2, min_dist_coeff, min_r_coeff, max_r_coeff, cell_size):
+    def __find_circles(self, img_gray, param2, min_dist_coeff, min_r_coeff, max_r_coeff, cell_size):
         circles = cv2.HoughCircles(img_gray, method=METHOD, dp=DP,
                                    minDist=round(cell_size * min_dist_coeff),
                                    param1=PARAM1, param2=param2, minRadius=round(cell_size * min_r_coeff),
@@ -231,7 +292,7 @@ class Recognizer:
             return None
         return circles[0, :]
 
-    def stones_recognition(self, img_gray, cell_size, intersections):
+    def __stones_recognition(self, img_gray, cell_size, intersections):
         all_circles = []
         param2_grid = np.linspace(5, 30, 6)
         min_dist_coeff_grid = np.linspace(0.9, 0.9, 1)
@@ -243,7 +304,7 @@ class Recognizer:
                                     max_r_coeff_grid)).T.reshape(-1, 4)
 
         for param2, min_dist_coeff, min_r_coeff, max_r_coeff in grid:
-            circles = self.find_circles(img_gray, param2, min_dist_coeff, min_r_coeff, max_r_coeff, cell_size)
+            circles = self.__find_circles(img_gray, param2, min_dist_coeff, min_r_coeff, max_r_coeff, cell_size)
             if circles is not None:
                 all_circles.append(circles)
         circles = np.concatenate(all_circles)
@@ -260,7 +321,7 @@ class Recognizer:
             stones[intersection] = np.round(np.mean(np.array(stones[intersection]), axis=0)).astype(int)
         return stones, round(np.mean(radii))
 
-    def colorize(self, img_gray, stones, radius):
+    def __colorize(self, img_gray, stones, radius):
         white_stones = []
         black_stones = []
         for inter, stone in stones.items():
@@ -273,28 +334,39 @@ class Recognizer:
                 black_stones.append(inter)
         return np.array(white_stones), np.array(black_stones)
 
-    def split_into_boards(self, page_img):
+    def __signs_colorize(self, img_gray, stones, radius):
+        WHITE_WITH_NO_SIGNS_THRESHOLD = 250
+        CROSS_THRESHOLD = 180
+        WHITE_WITH_SIGN_THRESHOLD = 120
+        white_stones = []
+        black_stones = []
+        width = radius // 10
+        for stone_inter, stone in stones.items():
+            stone_mask = np.zeros((img_gray.shape[0], img_gray.shape[1]), np.uint8)
+            cv2.circle(stone_mask, (stone[0], stone[1]), round(radius * 0.8), 255, -1)
+            average_color = cv2.mean(img_gray, mask=stone_mask)[0]
+            if average_color >= WHITE_WITH_NO_SIGNS_THRESHOLD:
+                white_stones.append(stone_inter)
+            elif average_color >= CROSS_THRESHOLD:
+                average_color_left = np.mean(img_gray[stone_inter[1] - radius: stone_inter[1],
+                                             stone_inter[0] - width: stone_inter[0] + width])
+                average_color_right = np.mean(img_gray[stone_inter[1]: stone_inter[1] + radius,
+                                              stone_inter[0] - width: stone_inter[0] + width])
+                average_color_up = np.mean(np.mean(img_gray[stone_inter[1] - width: stone_inter[1] + width,
+                                                   stone_inter[0] - radius: stone_inter[0]]))
+                average_color_down = np.mean(img_gray[stone_inter[1] - width: stone_inter[1] + width,
+                                             stone_inter[0]: stone_inter[0] + radius])
+                if np.sum([average_color_left <= 150, average_color_right <= 150,
+                           average_color_up <= 150, average_color_down <= 150]) >= 2:
+                    pass
+                else:
+                    white_stones.append(stone_inter)
+            elif average_color >= WHITE_WITH_SIGN_THRESHOLD:
+                white_stones.append(stone_inter)
+            else:
+                black_stones.append(stone_inter)
+        return np.array(white_stones), np.array(black_stones)
 
-        page_img_gray = cv2.cvtColor(page_img, cv2.COLOR_BGR2GRAY)
-        edges = self.get_edges(page_img_gray)
-        # For better connectivity
-        for i in range(LOG_SCALE):
-            edges = cv2.pyrDown(edges)
-        scale = 2 ** LOG_SCALE
-        min_size = (min(page_img.shape[0:2]) * MIN_BOARD_SIZE_COEFF) // scale
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        # Filter contours (big and long enough)
-        boards = []
-        for contour in contours:
-            perimeter = cv2.arcLength(contour, True)
-            area = cv2.contourArea(contour)
-            if perimeter > 4 * min_size and area > min_size ** 2:
-                x, y, w, h = cv2.boundingRect(contour)
-                boards.append((scale * x, scale * y, scale * w, scale * h))
-        board_images = []
-        for board in boards:
-            x, y, w, h = board
-            board_img = page_img[max(y - S, 0): min(y + h + S, page_img.shape[0]),
-                        max(x - S, 0): min(x + w + S, page_img.shape[1])]
-            board_images.append(board_img)
-        return board_images
+    def __sort_boards(self, boards):
+        boards.sort(key=lambda coords: (coords[1], coords[0]))
+
