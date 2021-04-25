@@ -175,11 +175,7 @@ class MainWindow(QtWidgets.QMainWindow):
             doc = fitz.Document(file)
             dlg = CustomDialog(file, doc.page_count)
             dlg.exec_()
-            dlg_range = list(dlg.get_range())
-            dlg_range[0] -= 1
-            if dlg_range[1] <= dlg_range[0]:
-                dlg_range = dlg_range[::-1]
-            ranges.append(dlg_range)
+            ranges.append(dlg.get_range())
         return ranges
 
 

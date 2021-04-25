@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>198</height>
+    <width>577</width>
+    <height>154</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Выбор страниц для pdf</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,1,0">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0">
    <property name="spacing">
     <number>8</number>
    </property>
@@ -40,48 +40,11 @@
     </widget>
    </item>
    <item>
-    <layout class="QFormLayout" name="formLayout">
-     <property name="horizontalSpacing">
-      <number>6</number>
+    <widget class="QLineEdit" name="page_range">
+     <property name="placeholderText">
+      <string>Например: 1-2, 5, 7-8, или оставьте поле пустым для обработки файла целиком</string>
      </property>
-     <property name="verticalSpacing">
-      <number>6</number>
-     </property>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>От</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QSpinBox" name="start_page">
-       <property name="minimum">
-        <number>1</number>
-       </property>
-       <property name="maximum">
-        <number>9999</number>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>До</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QSpinBox" name="end_page">
-       <property name="minimum">
-        <number>1</number>
-       </property>
-       <property name="maximum">
-        <number>9999</number>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    </widget>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
@@ -104,8 +67,8 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
+     <x>259</x>
+     <y>186</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
@@ -120,8 +83,8 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
+     <x>327</x>
+     <y>186</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>

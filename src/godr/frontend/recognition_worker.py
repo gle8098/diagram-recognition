@@ -6,6 +6,7 @@ import numpy as np
 import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtCore import QObject, QThread
+from pagerange import PageRange
 
 from godr.backend.board import Board
 from godr.backend.recognizer import Recognizer
@@ -69,7 +70,7 @@ class RecognitionWorker(QThread):
 
             try:
                 if extension == '.pdf':
-                    self.parse_pdf(img_file, result_dir, start=dlg_range[0], end=dlg_range[1])
+                    self.parse_pdf(img_file, result_dir, range=dlg_range)
                 else:
                     with open(img_file, "rb") as f:
                         chunk = f.read()
@@ -121,14 +122,13 @@ class RecognitionWorker(QThread):
 
     def parse_pdf(self, path, result_dir, **kwargs):
         doc = fitz.Document(path)
-
-        start_page = kwargs['start'] if 'start' in kwargs else  0
-        end_page = kwargs['end'] if 'end' in kwargs else doc.page_count - 1
-
+        range = kwargs['range']
+        pages = range.pages
         subprocess_level = len(self.progress)
-        self.progress.append([0, end_page - start_page])
+        self.progress.append([0, len(pages)])
 
-        for page in doc.pages(start_page, end_page, 1):
+        for page_number in pages:
+            page = next(doc.pages(page_number-1, page_number, 1))
             self.send_update('Rendering {}-th page of PDF'.format(str(page.number + 1)))
 
             try:
@@ -151,15 +151,15 @@ class CustomDialog(QtWidgets.QDialog):
         form_class, _ = uic.loadUiType(pkg_resources.resource_stream('godr.frontend.ui', "select_pages_pdf.ui"))
         form_class().setupUi(self)
 
-        self.start_page = self.findChild(QtWidgets.QSpinBox, 'start_page')
-        self.end_page = self.findChild(QtWidgets.QSpinBox, 'end_page')
-
         self.findChild(QtWidgets.QLabel, 'path').setText(path_pdf)
-
-        for box in (self.start_page, self.end_page):
-            box.setRange(1, page_cnt)
-        self.start_page.setValue(1)
-        self.end_page.setValue(page_cnt)
+        self.page_cnt = page_cnt
+        self.page_range_widget = self.findChild(QtWidgets.QLineEdit, 'page_range')
 
     def get_range(self):
-        return self.start_page.value(), self.end_page.value()
+        text = self.page_range_widget.text()
+        try:
+            page_range = PageRange(text)
+        except ValueError as e:
+            page_range = PageRange("{}-{}".format(1, self.page_cnt))
+        return page_range
+

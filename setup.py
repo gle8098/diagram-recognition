@@ -16,7 +16,8 @@ setup(name='godr',
           'pyqt5',
           'numpy',
           'QtAwesome',
-          'PyMuPDF'
+          'PyMuPDF',
+          'pagerange'
       ],
       entry_points={
           'console_scripts': [
