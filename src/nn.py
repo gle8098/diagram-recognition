@@ -1,51 +1,23 @@
 import numpy as np
-import torch
-import torch.nn as nn
-from torchvision import transforms
-import torch.nn.functional as F
+import cv2
+import onnxruntime
 
+
+def to_numpy(tensor):
+    return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
 class StoneRecognizer():
 
-    class ConvNet(nn.Module):
-        def __init__(self):
-            super(StoneRecognizer.ConvNet, self).__init__()
-            self.conv1 = nn.Conv2d(1, 16, 3, padding=1)
-            self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
-            self.fc1 = nn.Linear(2048, 3)
-
-        def forward(self, x):
-            # torch.Size([1, 32, 32])
-            x = self.conv1(x)
-            x = F.relu(x)
-
-            # torch.Size([16, 32, 32])
-            x = self.conv2(x)
-            x = F.relu(x)
-
-            # torch.Size([32, 32, 32])
-            x = F.max_pool2d(x, 4)
-
-            # torch.Size([32, 8, 8]))
-
-            x = torch.flatten(x, 1)
-
-            # torch.Size([2048])
-            x = self.fc1(x)
-            output = F.log_softmax(x, dim=1)
-
-            # torch.Size([3])
-            return output
-
     def __init__(self):
-        self.device = torch.device("cpu")
-        self.model = self.ConvNet()
-        self.model.load_state_dict(torch.load("model.pth", map_location=self.device))
-        self.model.eval()
-        self.transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Resize((32, 32)),
-            transforms.Normalize((0.5,), (0.5,))])
+        self.model = onnxruntime.InferenceSession("src/models/model-2.onnx")
+
+    def transform(self, img):
+        img = img.astype(np.float32) / 255
+        img = cv2.resize(img, dsize=(32, 32), interpolation=cv2.INTER_LINEAR)
+        img = (img - 0.5) / 0.5
+        img = np.expand_dims(img, axis=[0, 1])
+        return img
+
 
     def recognize(self, img_gray, cell_size, intersections):
         CELL_SIZE_COEFF = 0.6
@@ -57,10 +29,11 @@ class StoneRecognizer():
             y = intersection[0]
             x = intersection[1]
             point_img = img_gray[max(x - delta, 0): min(x + delta, img_gray.shape[0]),
-                        max(y - delta, 0): min(y + delta, img_gray.shape[1])]
-            data = self.transform(point_img).to(self.device)
-            output = self.model(data.unsqueeze(1))
-            pred = output.argmax(dim=1, keepdim=True).item()
+                                 max(y - delta, 0): min(y + delta, img_gray.shape[1])]
+            data = self.transform(point_img)
+            input = {self.model.get_inputs()[0].name: data}
+            output = self.model.run(None, input)[0]
+            pred = np.argmax(output, axis = 1)
             if pred == 0:
                 white_stones.append(intersection)
             elif pred == 1:
