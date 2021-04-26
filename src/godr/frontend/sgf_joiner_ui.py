@@ -43,8 +43,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.line_outdir.setText(self.outdir)
 
     def merge(self):
-        if not self.files:
-            self.show_message("Выберите файлы")
+        if len(self.files) < 2:
+            self.show_message("Выберите не менее 2 файлов")
             return
 
         if not self.outdir:
