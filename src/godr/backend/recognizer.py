@@ -66,7 +66,7 @@ class Recognizer:
                 boards.append((x, y, w, h))
         if len(boards) == 0:
             raise self.EmptyBoardsError()
-        extra_size //= 20
+        extra_size //= 25
         boards.sort(key=lambda coords: coords[1])
         new_line = np.diff(boards, axis=0)[:, 1] > extra_size
         num_lines = np.sum(new_line) + 1

@@ -54,9 +54,12 @@ class SgfPainter(QWidget):
             return
 
         width = s - 60  # width of the actual board
-        r = int(width / (sgf_board_size-1) / 2.1)  # radius of stones
-        coords = [int(i * width / (sgf_board_size-1) + 30) for i in range(sgf_board_size)]
+        width_per_col = width / (sgf_board_size-1)
+        r = (width_per_col / 2.1)  # radius of stones
+        coords = [(i * width_per_col + 30) for i in range(sgf_board_size)]
         cmin, cmax = min(coords), max(coords)
+
+        qp.translate((w - s) // 2, (h - s) // 2)  # draw board at the center
 
         for c in coords:
             qp.drawLine(c, cmin, c, cmax)

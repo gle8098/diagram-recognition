@@ -12,15 +12,66 @@ from godr.backend.board import Board
 from godr.backend.recognizer import Recognizer
 
 
-def QImageToCvMat(incomingImage):
-    incomingImage = incomingImage.convertToFormat(QtGui.QImage.Format_RGB888)
+def qt_image_to_cv_mat(qt_image):
+    qt_image = qt_image.convertToFormat(QtGui.QImage.Format_RGB888)
 
-    width = incomingImage.width()
-    height = incomingImage.height()
+    width = qt_image.width()
+    height = qt_image.height()
 
-    ptr = incomingImage.constBits()
-    arr = np.array(ptr).reshape(height, width, 3)  # Copies the data?
+    ptr = qt_image.constBits()
+    arr = np.array(ptr).reshape((height, width, 3))  # Copies the data?
     return arr
+
+
+class Progress:
+    """
+    This class is used to calculate progress on nested tasks. Here is an example:
+
+    * <layer 0> recognize each of selected files
+        * <layer 1> current file is pdf, recognize each page
+            * <layer 2> several boards found on page, recognize each
+
+    As you can see, recognition is a nested task. To properly calculate global progress, each simple task makes
+    a layer for itself. Layer contains a list of two elements, ``[current, total]``, which means that the job has
+    been done for ``current / total * 100`` percent.
+    """
+    def __init__(self, init_range=None):
+        self._progress = []
+        if init_range:
+            self.add_layer(init_range)
+
+    def __warn(self, msg):
+        print('WARN RecognitionWorker.Progress: {}'.format(msg))
+
+    def add_layer(self, prange):
+        assert len(prange) == 2 and prange[0] <= prange[1]
+        self._progress.append(list(prange))
+        return len(self._progress) - 1
+
+    def append_progress(self, layer, delta):
+        assert layer < len(self._progress)
+        self.set_progress(layer, self._progress[layer][0] + delta)
+
+    def set_progress(self, layer, value):
+        assert layer < len(self._progress)
+        if not (0 <= value <= self._progress[layer][1]):
+            self.__warn('setting progress > 1')
+        self._progress[layer][0] = value
+
+    def pop_layer(self, layer):
+        assert layer < len(self._progress)
+        if layer + 1 < len(self._progress):
+            self.__warn('pop layer with its child')
+        self._progress = self._progress[:layer]
+
+    def calc(self):
+        fraction = 0.0
+        for subprogress in self._progress[::-1]:
+            fraction = (subprogress[0] + fraction) / subprogress[1]
+            if fraction > 1:
+                self.__warn('fraction > 1')
+                fraction = 1
+        return int(100 * fraction)
 
 
 class RecognitionWorker(QThread):
@@ -32,20 +83,11 @@ class RecognitionWorker(QThread):
         super(QObject, self).__init__()
         self.files = files
         self.ranges = ranges
-        self.progress = [ [0, len(files)] ]
-
-    def calc_progress(self):
-        fraction = 0.0
-        for subprogress in self.progress[::-1]:
-            fraction = (subprogress[0] + fraction) / subprogress[1]
-            if fraction > 1:
-                print('WARN RecognitionWorker: fraction > 1')
-                fraction = 1
-        return int(100 * fraction)
+        self.progress = Progress((0, len(files)))
 
     def send_update(self, line):
         """ Notifies MainWindow to update progress bar and append line to the log """
-        percent = self.calc_progress()
+        percent = self.progress.calc()
         self.update_ui.emit(percent, line)
 
     def run(self):
@@ -59,7 +101,7 @@ class RecognitionWorker(QThread):
         for img_file, dlg_range in zip(self.files, self.ranges):
             result_dir, extension = os.path.splitext(img_file)
             if extension not in ['.png', '.jpg', '.jpeg', '.pdf']:
-                self.progress[0][0] += 1
+                self.progress.append_progress(0, 1)
                 self.send_update('')  # Do not log skipped files
                 continue
 
@@ -81,7 +123,7 @@ class RecognitionWorker(QThread):
             except Exception as ex:
                 output = 'An error occurred <<{}>>'.format(str(ex))
 
-            self.progress[0][0] += 1
+            self.progress.append_progress(0, 1)
             self.send_update(output + '\n')
 
         self.done.emit()
@@ -92,8 +134,7 @@ class RecognitionWorker(QThread):
         boards_img = rec.split_into_boards(img)
 
         total_boards = len(boards_img)
-        subprocess_level = len(self.progress)
-        self.progress.append([1, total_boards + 1])
+        p_layer = self.progress.add_layer((1, total_boards + 1))
         self.send_update('Found {} board(s)'.format(total_boards))
 
         i = 1
@@ -107,28 +148,26 @@ class RecognitionWorker(QThread):
                 paths.append(path)
                 self.send_board.emit(path, board_img)
 
-                self.progress[subprocess_level][0] = i + 1
+                self.progress.set_progress(p_layer, i + 1)
                 self.send_update('> Board {} saved'.format(i))
 
             except Exception as e:
                 self.send_board.emit("", board_img)
-                self.progress[subprocess_level][0] = i + 1
-                self.send_update('> An error occurred while processing board {}'.format(i))
+                self.progress.set_progress(p_layer, i + 1)
+                self.send_update('> An error occurred while processing board {}. <<{}>>'.format(i, str(e)))
             i += 1
 
-        self.progress.pop()
-        assert len(self.progress) == subprocess_level
+        self.progress.pop_layer(p_layer)
         return paths, boards_img
 
     def parse_pdf(self, path, result_dir, **kwargs):
         doc = fitz.Document(path)
         range = kwargs['range']
         pages = range.pages
-        subprocess_level = len(self.progress)
-        self.progress.append([0, len(pages)])
+        p_layer = self.progress.add_layer((0, len(pages)))
 
         for page_number in pages:
-            page = next(doc.pages(page_number-1, page_number, 1))
+            page = doc.load_page(page_number - 1)
             self.send_update('Rendering {}-th page of PDF'.format(str(page.number + 1)))
 
             try:
@@ -138,13 +177,12 @@ class RecognitionWorker(QThread):
                 self.parse_img(png, result_dir, 'page-{}-'.format(str(page.number + 1)))
             except:
                 pass
-            self.progress[subprocess_level][0] += 1
+            self.progress.append_progress(p_layer, 1)
 
-        self.progress.pop()
-        assert len(self.progress) == subprocess_level
+        self.progress.pop_layer(p_layer)
 
 
-class CustomDialog(QtWidgets.QDialog):
+class SelectPageRangeDialog(QtWidgets.QDialog):
     def __init__(self, path_pdf, page_cnt, parent=None):
         super().__init__(parent=parent)
 
@@ -159,7 +197,6 @@ class CustomDialog(QtWidgets.QDialog):
         text = self.page_range_widget.text()
         try:
             page_range = PageRange(text)
-        except ValueError as e:
+        except ValueError:
             page_range = PageRange("{}-{}".format(1, self.page_cnt))
         return page_range
-

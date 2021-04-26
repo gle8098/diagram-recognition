@@ -11,7 +11,7 @@ from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette
 from PyQt5.QtWidgets import QFileDialog, QApplication
 
 from godr.frontend import miscellaneous
-from godr.frontend.recognition_worker import RecognitionWorker, CustomDialog
+from godr.frontend.recognition_worker import RecognitionWorker, SelectPageRangeDialog
 from godr.frontend.sgfpainter import SgfPainter
 
 
@@ -173,7 +173,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 continue
 
             doc = fitz.Document(file)
-            dlg = CustomDialog(file, doc.page_count)
+            dlg = SelectPageRangeDialog(file, doc.page_count)
             dlg.exec_()
             ranges.append(dlg.get_range())
         return ranges
