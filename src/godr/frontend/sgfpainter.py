@@ -11,9 +11,9 @@ def get_star_points(size):
     if size == 19:
         return itertools.product((3, 9, 15), (3, 9, 15))
     elif size == 13:
-        return (6, 6), *itertools.product((3, 9), (3, 9))
+        return [(6, 6), *itertools.product((3, 9), (3, 9))]
     elif size == 9:
-        return (4, 4), *itertools.product((2, 6), (2, 6))
+        return [(4, 4), *itertools.product((2, 6), (2, 6))]
     return tuple()  # No stars for custom size
 
 

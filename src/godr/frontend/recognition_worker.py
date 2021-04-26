@@ -118,7 +118,7 @@ class RecognitionWorker(QThread):
                         chunk = f.read()
                         img_bytes = np.frombuffer(chunk, dtype=np.uint8)
                         self.parse_img(img_bytes, result_dir)
-                output = "File proceed"
+                output = "File processed"
 
             except Exception as ex:
                 output = 'An error occurred <<{}>>'.format(str(ex))
