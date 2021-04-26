@@ -20,7 +20,7 @@ py -m virtualenv venv
 venv\Scripts\activate
 
 # Then for all platforms
-pip install -r requirements.txt
+pip install .
 pip install pyinstaller
 ```
 
@@ -37,7 +37,7 @@ pip install pyqt5==5.15.3
 процесса --- `app_ui.spec`.
 
 ```bash
-pyinstaller --clean -y app_ui.spec
+pyinstaller --clean -y godr.spec
 ```
 
 Процесс должен завершиться успешно. После этого появится папка `dist` с

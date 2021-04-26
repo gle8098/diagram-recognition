@@ -3,10 +3,11 @@
 block_cipher = None
 
 
-a = Analysis(['app_ui.py'],
+a = Analysis(['src/godr/frontend/sgf_joiner_ui.py'],
              pathex=[],
              binaries=[],
-             datas=[('ui', 'ui')],
+             datas=[('src/godr/frontend/ui/merge_sgf.ui', 'godr/frontend/ui/'),
+                    ('src/godr/frontend/ui/__init__.py',  'godr/frontend/ui/')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -21,7 +22,7 @@ exe = EXE(pyz,
           a.scripts,
           [],
           exclude_binaries=True,
-          name='godr',
+          name='sgf_joiner.app',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
@@ -34,8 +35,8 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='godr')
+               name='sgf_joiner')
 app = BUNDLE(coll,
-             name='godr.app',
+             name='sgf_joiner.app',
              icon=None,
              bundle_identifier=None)

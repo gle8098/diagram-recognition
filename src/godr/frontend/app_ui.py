@@ -1,118 +1,27 @@
 import glob
-import sys
-import cv2
 import os
-from os import path
+import sys
 
+import pkg_resources
+import fitz
 import qtawesome as qta
-import numpy as np
-from PyQt5 import uic, QtCore
-from PyQt5.QtCore import QObject, QThread
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette, QPainter
+from PyQt5 import uic, QtCore
+from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette
 from PyQt5.QtWidgets import QFileDialog, QApplication
 
-from src import miscellaneous
-from src.board import Board
-from src.recognizer import Recognizer
-from src.sgfpainter import SgfPainter
+from godr.frontend import miscellaneous
+from godr.frontend.recognition_worker import RecognitionWorker, SelectPageRangeDialog
+from godr.frontend.sgfpainter import SgfPainter
 
 
-class RecognitionWorker(QThread):
-    update_ui = QtCore.pyqtSignal(int, str)   # (percent, append_to_console)
-    send_board = QtCore.pyqtSignal(str, np.ndarray)  # (path_to_sgf, img)
-    done = QtCore.pyqtSignal()
-
-    def __init__(self, files):
-        super(QObject, self).__init__()
-        self.files = files
-        self.files_done = 0
-        self.subprogress = 0
-
-    def send_update(self, line):
-        """ Notifies MainWindow to update progress bar and append line to the log """
-        percent = int(100 * (self.files_done + self.subprogress) / len(self.files))
-        self.update_ui.emit(percent, line)
-
-    def run(self):
-        if not self.files:
-            self.update_ui.emit(0, 'No files selected')
-            return
-
-        print('Recognising {} files'.format(len(self.files)))
-
-        for img_file in self.files:
-            extension = os.path.splitext(img_file)[1]
-            if extension not in ['.png', '.jpg']:
-                self.files_done += 1
-                self.send_update('')  # Do not log skipped files
-                continue
-
-            self.send_update('Processing {}'.format(img_file))
-
-            try:
-                with open(img_file, "rb") as f:
-                    chunk = f.read()
-                    chunk_arr = np.frombuffer(chunk, dtype=np.uint8)
-
-                self.parse_img(img_file, chunk_arr)
-                output = "Converting finished"
-
-            except Exception as ex:
-                output = 'An error occurred <<{}>>'.format(str(ex))
-
-            self.subprogress = 0
-            self.files_done += 1
-            self.send_update(output + '\n')
-
-        self.done.emit()
-
-    def parse_img(self, img_path, img_bytes):
-        # Create dir
-        index = img_path.rfind('.')
-        path_dir = img_path[:index]
-        os.makedirs(path_dir, exist_ok=True)
-
-        img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
-        rec = Recognizer()
-        boards_img = rec.split_into_boards(img)
-
-        total_boards = len(boards_img)
-        self.subprogress = 1 / (total_boards + 1)
-        self.send_update('Found {} board(s)'.format(total_boards))
-
-        i = 1
-        paths = []
-        for board_img in boards_img:
-            try:
-                board = Board(board_img)
-                sgf_file = 'board-{}.sgf'.format(str(i))
-                path = os.path.join(path_dir, sgf_file)
-                board.save_sgf(path)
-                paths.append(path)
-                self.send_board.emit(path, board_img)
-
-                self.subprogress = (i + 1) / (total_boards + 1)
-                self.send_update('> Board {} saved'.format(i))
-
-            except Exception as e:
-                self.send_board.emit("", board_img)
-                self.subprogress = (i + 1) / (total_boards + 1)
-                self.send_update('> An error occurred while processing board {}'.format(i))
-            i += 1
-
-        return paths, boards_img
-
-
-# Loads window layout
-app_dir = path.dirname(sys.argv[0])
-ui_dir = path.join(app_dir, "ui")
-Form, Window = uic.loadUiType(path.join(ui_dir, "window.ui"))
-
-
-class MainWindow(Window):
+class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # Load Qt Designer form
+        form_class, _ = uic.loadUiType(pkg_resources.resource_stream('godr.frontend.ui', "window.ui"))
+        form_class().setupUi(self)
 
         self.selected_files = tuple()
         self.recognition_worker = None
@@ -145,12 +54,12 @@ class MainWindow(Window):
         self.lock_open_sgf_button(True)
 
     def resizeEvent(self, event):
-        result = super(Window, self).resizeEvent(event)
+        result = super(QtWidgets.QMainWindow, self).resizeEvent(event)
         self.redraw_preview_image()
         return result
 
     def select_files(self):
-        type_filter = "PNG, JPEG (*.png *.jpg)"
+        type_filter = "All supported formats (*.png *.jpg *.jpeg *.pdf)"
         dialog = QFileDialog()
         dialog.setFileMode(QFileDialog.ExistingFiles)
         names, _ = dialog.getOpenFileNames(self, caption="Open files", directory=os.getcwd(), filter=type_filter)
@@ -161,7 +70,9 @@ class MainWindow(Window):
         print('Files are {}'.format(self.selected_files))
         self.lock_recognize_button(True)
 
-        self.recognition_worker = RecognitionWorker(self.selected_files)
+        ranges = self.collect_ranges_for_files()
+
+        self.recognition_worker = RecognitionWorker(self.selected_files, ranges)
         self.recognition_worker.update_ui.connect(self.update_progress_bar)
         self.recognition_worker.send_board.connect(self.accept_new_board)
         self.recognition_worker.done.connect(lambda: self.lock_recognize_button(False))
@@ -254,12 +165,23 @@ class MainWindow(Window):
             except Exception as ex:
                 print("Could not open file \"{}\" because <<{}>>".format(filename, str(ex)))
 
+    def collect_ranges_for_files(self):
+        ranges = []
+        for file in self.selected_files:
+            if not file.endswith('.pdf'):
+                ranges.append(None)
+                continue
 
-if __name__ == '__main__':
+            doc = fitz.Document(file)
+            dlg = SelectPageRangeDialog(file, doc.page_count)
+            dlg.exec_()
+            ranges.append(dlg.get_range())
+        return ranges
+
+
+def main():
     app = QApplication(sys.argv)
     window = MainWindow()
-    form = Form()
-    form.setupUi(window)
     window.init_ui()
     window.show()
 
@@ -272,3 +194,7 @@ if __name__ == '__main__':
         window.convert_to_sgf()
 
     app.exec_()
+
+
+if __name__ == '__main__':
+    main()
