@@ -63,6 +63,12 @@ class MainWindow(QtWidgets.QMainWindow):
         if event.key() == Qt.Key_D:
             self.next_file()
 
+    def wheelEvent(self, event):
+        if event.angleDelta().y() > 0:
+            self.next_file()
+        else:
+            self.previous_file()
+
     def resizeEvent(self, event):
         result = super(QtWidgets.QMainWindow, self).resizeEvent(event)
         self.redraw_preview_image()
