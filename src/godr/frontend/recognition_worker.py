@@ -193,6 +193,9 @@ class SelectPageRangeDialog(QtWidgets.QDialog):
         self.page_cnt = page_cnt
         self.page_range_widget = self.findChild(QtWidgets.QLineEdit, 'page_range')
 
+        pages_str = self.get_ending(page_cnt)
+        self.findChild(QtWidgets.QLabel, 'page_cnt').setText("Всего {} {}".format(page_cnt, pages_str))
+
     def get_range(self):
         text = self.page_range_widget.text()
         try:
@@ -200,3 +203,12 @@ class SelectPageRangeDialog(QtWidgets.QDialog):
         except ValueError:
             page_range = PageRange("{}-{}".format(1, self.page_cnt))
         return page_range
+
+    def get_ending(self, number):
+        if number % 100 in [11, 12, 13, 14]:
+            return "страниц"
+        if number % 10 == 1:
+            return "страница"
+        if number % 10 in [2, 3, 4]:
+            return "страницы"
+        return "страниц"
