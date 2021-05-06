@@ -9,6 +9,8 @@ from PyQt5 import QtWidgets
 from PyQt5 import uic, QtCore
 from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette
 from PyQt5.QtWidgets import QFileDialog, QApplication
+# from PyQt5.uic.properties import QtGui
+from PyQt5.Qt import Qt
 
 from godr.frontend import miscellaneous
 from godr.frontend.recognition_worker import RecognitionWorker, SelectPageRangeDialog
@@ -52,6 +54,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.findChild(QtWidgets.QPushButton, "next_button").setIcon(qta.icon('fa5s.angle-double-right'))
 
         self.lock_open_sgf_button(True)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_A:
+            self.previous_file()
+        if event.key() == Qt.Key_D:
+            self.next_file()
 
     def resizeEvent(self, event):
         result = super(QtWidgets.QMainWindow, self).resizeEvent(event)
