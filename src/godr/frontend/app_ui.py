@@ -31,6 +31,8 @@ class MainWindow(QtWidgets.QMainWindow):
         # Boards preview
         self.paths = []
         self.images = []  # List of QPixmap
+        self.parent_files = []
+        self.board_indices = []
         self.current_index = -1
         self.n_boards = 0
 
@@ -116,13 +118,25 @@ class MainWindow(QtWidgets.QMainWindow):
         line = 'Доска {} из {}'.format(self.current_index + 1, self.n_boards)
         self.findChild(QtWidgets.QLabel, "label_board_index").setText(line)
 
-    def accept_new_board(self, path, image):
+        current_path = self.paths[self.current_index]
+        if current_path != "":
+            file_name = os.path.basename(current_path)
+            self.findChild(QtWidgets.QLabel, "sgf_name").setText(file_name)
+        else:
+            self.findChild(QtWidgets.QLabel, "sgf_name").setText("Не удалось распознать доску")
+
+        self.findChild(QtWidgets.QLabel, "file_name").setText(self.parent_files[self.current_index])
+        self.findChild(QtWidgets.QLabel, "board_index").setText(self.board_indices[self.current_index])
+
+    def accept_new_board(self, path, image, parent_file, board_index):
         height, width, channel = image.shape
         bytes_per_line = 3 * width
         pixmap_img = QPixmap(QImage(bytes(image.data), width, height, bytes_per_line, QImage.Format_RGB888))
 
         self.paths.append(path)
         self.images.append(pixmap_img)
+        self.parent_files.append(parent_file)
+        self.board_indices.append(board_index)
         self.n_boards += 1
 
         index = self.current_index

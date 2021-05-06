@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>886</width>
-    <height>511</height>
+    <width>1014</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -67,26 +67,30 @@
       <property name="title">
        <string>Предпросмотр досок</string>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0,0">
+      <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,1,0,0">
        <item>
-        <layout class="QHBoxLayout" name="titles">
+        <widget class="QLabel" name="file_name">
+         <property name="text">
+          <string>Имя файла</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
          <item>
-          <widget class="QLabel" name="label">
+          <widget class="QLabel" name="board_index">
            <property name="text">
-            <string>Изображение из файла</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
+            <string>Номер доски на странице</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="label_2">
+          <widget class="QLabel" name="sgf_name">
            <property name="text">
-            <string>Распознанный SGF</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
+            <string>Название sgf</string>
            </property>
           </widget>
          </item>

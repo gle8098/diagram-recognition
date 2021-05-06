@@ -76,7 +76,7 @@ class Progress:
 
 class RecognitionWorker(QThread):
     update_ui = QtCore.pyqtSignal(int, str)   # (percent, append_to_console)
-    send_board = QtCore.pyqtSignal(str, np.ndarray)  # (path_to_sgf, img)
+    send_board = QtCore.pyqtSignal(str, np.ndarray, str, str)  # (path_to_sgf, img)
     done = QtCore.pyqtSignal()
 
     def __init__(self, files, ranges):
@@ -128,7 +128,7 @@ class RecognitionWorker(QThread):
 
         self.done.emit()
 
-    def parse_img(self, img_bytes, path_dir, prefix=''):
+    def parse_img(self, img_bytes, path_dir, prefix='', pdf_page=-1):
         img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
         rec = Recognizer()
         boards_img = rec.split_into_boards(img)
@@ -139,20 +139,25 @@ class RecognitionWorker(QThread):
 
         i = 1
         paths = []
+        n_boards = len(boards_img)
         for board_img in boards_img:
+            if pdf_page != -1:
+                board_number_text = "Страница {}, доска {} из {}".format(pdf_page, i, n_boards)
+            else:
+                board_number_text = "Доска {} из {}".format(i, n_boards)
             try:
                 board = Board(board_img)
                 sgf_file = '{}board-{}.sgf'.format(prefix, str(i))
                 path = os.path.join(path_dir, sgf_file)
                 board.save_sgf(path)
                 paths.append(path)
-                self.send_board.emit(path, board_img)
 
+                self.send_board.emit(path, board_img, path_dir, board_number_text)
                 self.progress.set_progress(p_layer, i + 1)
                 self.send_update('> Board {} saved'.format(i))
 
             except Exception as e:
-                self.send_board.emit("", board_img)
+                self.send_board.emit("", board_img, path_dir, board_number_text)
                 self.progress.set_progress(p_layer, i + 1)
                 self.send_update('> An error occurred while processing board {}. <<{}>>'.format(i, str(e)))
             i += 1
@@ -174,7 +179,7 @@ class RecognitionWorker(QThread):
                 # page.get_pixmap().writePNG('test.png')
                 png = page.get_pixmap().getPNGData()
                 png = np.frombuffer(png, dtype=np.int8)
-                self.parse_img(png, result_dir, 'page-{}-'.format(str(page.number + 1)))
+                self.parse_img(png, result_dir, 'page-{}-'.format(str(page.number + 1)), page_number)
             except:
                 pass
             self.progress.append_progress(p_layer, 1)
