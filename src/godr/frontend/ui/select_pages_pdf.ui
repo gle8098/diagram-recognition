@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Выбор страниц для pdf</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0">
    <property name="spacing">
     <number>8</number>
    </property>
@@ -36,6 +36,13 @@
     <widget class="QLabel" name="path">
      <property name="text">
       <string>/path/to/pdf</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="page_cnt">
+     <property name="text">
+      <string>всего n страниц</string>
      </property>
     </widget>
    </item>
