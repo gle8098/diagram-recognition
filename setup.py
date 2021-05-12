@@ -10,7 +10,6 @@ setup(name='godr',
       package_dir={'': 'src'},
       python_requires='>3.6',
       install_requires=[
-          'matplotlib',
           'opencv-python-headless',
           'sgfmill',
           'pyqt5',
@@ -23,6 +22,7 @@ setup(name='godr',
       entry_points={
           'console_scripts': [
               'godr=godr.frontend.app_ui:main',
-              'sgf_joiner=godr.sgf_joiner:main'
+              'sgf_joiner=godr.sgf_joiner:main',
+              'sgf_joiner_ui=godr.frontend.sgf_joiner_ui:main'
           ]
       })

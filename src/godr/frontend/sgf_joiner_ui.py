@@ -27,7 +27,7 @@ class MainWindow(QtWidgets.QMainWindow):
         type_filter = "SGF (*.sgf)"
         dialog = QFileDialog()
         dialog.setFileMode(QFileDialog.ExistingFiles)
-        names, _ = dialog.getOpenFileNames(self, caption="Open files", directory=os.getcwd(), filter=type_filter)
+        names, _ = dialog.getOpenFileNames(self, caption="Выберите SGF", filter=type_filter)
 
         self.files = names
         self.line_files.setText(str(names))
