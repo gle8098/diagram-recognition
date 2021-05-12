@@ -1,10 +1,12 @@
 from sgfmill.sgf import Sgf_game, Tree_node
+import datetime
 import argparse
 import os
 from typing import List, Dict
 import logging
 
 logging.basicConfig(format='%(asctime)s - (%(name)s) [%(levelname)s] - %(message)s', level=logging.INFO)
+VERSION = 0.1
 
 
 class SGFJoiner:
@@ -28,6 +30,11 @@ class SGFJoiner:
             board_size = game.get_size()
             master_board = self.boards.setdefault(board_size, Sgf_game(size=board_size))
             self._cross_game_node_reparent(game.get_root(), master_board.get_root())
+        # set date and application properties
+        for board in self.boards.values():
+            root_node = board.get_root()
+            root_node.set('DT', datetime.datetime.now().strftime('%Y-%m-%d'))
+            root_node.set('AP', ('SGF joiner', '{}'.format(VERSION)))
         return self.boards
 
     def join_files(self, sgf_files: List[str]) -> Dict[int, Sgf_game]:
@@ -52,6 +59,9 @@ class SGFJoiner:
     def _cross_game_node_reparent(cls, node: Tree_node, new_parent_node: Tree_node):
         new_node = new_parent_node.new_child()
         for property_name in node.properties():
+            # do not copy properties which must be defined at root level only
+            if property_name in ['FF', 'CA', 'SZ', 'GM', 'DT', 'KM', 'AP']:
+                continue
             new_node.set(property_name, node.get(property_name))
         colour, point = node.get_move()
         if colour:
