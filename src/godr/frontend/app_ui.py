@@ -9,10 +9,10 @@ from PyQt5 import QtWidgets
 from PyQt5 import uic, QtCore
 from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette
 from PyQt5.QtWidgets import QFileDialog, QApplication
-# from PyQt5.uic.properties import QtGui
 from PyQt5.Qt import Qt
 
 from godr.frontend import miscellaneous
+from godr.frontend.miscellaneous import translate_plural
 from godr.frontend.recognition_worker import RecognitionWorker, SelectPageRangeDialog
 from godr.frontend.sgfpainter import SgfPainter
 
@@ -78,7 +78,7 @@ class MainWindow(QtWidgets.QMainWindow):
         type_filter = "All supported formats (*.png *.jpg *.jpeg *.pdf)"
         dialog = QFileDialog()
         dialog.setFileMode(QFileDialog.ExistingFiles)
-        names, _ = dialog.getOpenFileNames(self, caption="Open files", directory=os.getcwd(), filter=type_filter)
+        names, _ = dialog.getOpenFileNames(self, caption="Выберите файлы для распознавания", filter=type_filter)
 
         self.set_selected_files(names)
 
@@ -104,14 +104,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def set_selected_files(self, files):
         self.selected_files = files
 
-        # todo: use Qt Linguist & its tr() function
         n = len(files)
-        if n % 10 == 1 and n % 100 != 11:
-            line = '{} файл выбран'
-        elif 2 <= n % 10 <= 4 and (n % 100 < 10 or n % 100 > 20):
-            line = '{} файла выбрано'
-        else:
-            line = '{} файлов выбрано'
+        line = translate_plural(n, '{} файл выбран', '{} файла выбрано', '{} файлов выбрано')
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
 
     def lock_recognize_button(self, state):

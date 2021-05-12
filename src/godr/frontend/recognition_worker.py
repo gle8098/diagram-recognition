@@ -10,6 +10,7 @@ from pagerange import PageRange
 
 from godr.backend.board import Board
 from godr.backend.recognizer import Recognizer
+from godr.frontend.miscellaneous import Progress, translate_plural
 
 
 def qt_image_to_cv_mat(qt_image):
@@ -23,60 +24,9 @@ def qt_image_to_cv_mat(qt_image):
     return arr
 
 
-class Progress:
-    """
-    This class is used to calculate progress on nested tasks. Here is an example:
-
-    * <layer 0> recognize each of selected files
-        * <layer 1> current file is pdf, recognize each page
-            * <layer 2> several boards found on page, recognize each
-
-    As you can see, recognition is a nested task. To properly calculate global progress, each simple task makes
-    a layer for itself. Layer contains a list of two elements, ``[current, total]``, which means that the job has
-    been done for ``current / total * 100`` percent.
-    """
-    def __init__(self, init_range=None):
-        self._progress = []
-        if init_range:
-            self.add_layer(init_range)
-
-    def __warn(self, msg):
-        print('WARN RecognitionWorker.Progress: {}'.format(msg))
-
-    def add_layer(self, prange):
-        assert len(prange) == 2 and prange[0] <= prange[1]
-        self._progress.append(list(prange))
-        return len(self._progress) - 1
-
-    def append_progress(self, layer, delta):
-        assert layer < len(self._progress)
-        self.set_progress(layer, self._progress[layer][0] + delta)
-
-    def set_progress(self, layer, value):
-        assert layer < len(self._progress)
-        if not (0 <= value <= self._progress[layer][1]):
-            self.__warn('setting progress > 1')
-        self._progress[layer][0] = value
-
-    def pop_layer(self, layer):
-        assert layer < len(self._progress)
-        if layer + 1 < len(self._progress):
-            self.__warn('pop layer with its child')
-        self._progress = self._progress[:layer]
-
-    def calc(self):
-        fraction = 0.0
-        for subprogress in self._progress[::-1]:
-            fraction = (subprogress[0] + fraction) / subprogress[1]
-            if fraction > 1:
-                self.__warn('fraction > 1')
-                fraction = 1
-        return int(100 * fraction)
-
-
 class RecognitionWorker(QThread):
-    update_ui = QtCore.pyqtSignal(int, str)   # (percent, append_to_console)
-    send_board = QtCore.pyqtSignal(str, np.ndarray, str, str)  # (path_to_sgf, img)
+    update_ui = QtCore.pyqtSignal(int, str)  # (percent, append_to_console)
+    send_board = QtCore.pyqtSignal(str, np.ndarray, str, str)  # (path_to_sgf, img, path_dir, board_title)
     done = QtCore.pyqtSignal()
 
     def __init__(self, files, ranges):
@@ -128,7 +78,10 @@ class RecognitionWorker(QThread):
 
         self.done.emit()
 
-    def parse_img(self, img_bytes, path_dir, prefix='', pdf_page=-1):
+    def parse_img(self, img_bytes, path_dir, **kwargs):
+        file_prefix = kwargs.get("file_prefix", "")
+        board_title_fmt = kwargs.get("board_title_fmt", "Доска {} из {}")
+
         img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
         rec = Recognizer()
         boards_img = rec.split_into_boards(img)
@@ -139,27 +92,25 @@ class RecognitionWorker(QThread):
 
         i = 1
         paths = []
-        n_boards = len(boards_img)
         for board_img in boards_img:
-            if pdf_page != -1:
-                board_number_text = "Страница {}, доска {} из {}".format(pdf_page, i, n_boards)
-            else:
-                board_number_text = "Доска {} из {}".format(i, n_boards)
+            board_title = board_title_fmt.format(i, len(boards_img))
+            sgf_file = '{}board-{}.sgf'.format(file_prefix, str(i))
+            sgf_path = os.path.join(path_dir, sgf_file)
+
             try:
                 board = Board(board_img)
-                sgf_file = '{}board-{}.sgf'.format(prefix, str(i))
-                path = os.path.join(path_dir, sgf_file)
-                board.save_sgf(path)
-                paths.append(path)
+                board.save_sgf(sgf_path)
+                paths.append(sgf_path)
 
-                self.send_board.emit(path, board_img, path_dir, board_number_text)
+                self.send_board.emit(sgf_path, board_img, path_dir, board_title)
                 self.progress.set_progress(p_layer, i + 1)
                 self.send_update('> Board {} saved'.format(i))
 
             except Exception as e:
-                self.send_board.emit("", board_img, path_dir, board_number_text)
+                self.send_board.emit("", board_img, path_dir, board_title)
                 self.progress.set_progress(p_layer, i + 1)
                 self.send_update('> An error occurred while processing board {}. <<{}>>'.format(i, str(e)))
+
             i += 1
 
         self.progress.pop_layer(p_layer)
@@ -167,8 +118,7 @@ class RecognitionWorker(QThread):
 
     def parse_pdf(self, path, result_dir, **kwargs):
         doc = fitz.Document(path)
-        range = kwargs['range']
-        pages = range.pages
+        pages = kwargs['range'].pages
         p_layer = self.progress.add_layer((0, len(pages)))
 
         for page_number in pages:
@@ -179,7 +129,9 @@ class RecognitionWorker(QThread):
                 # page.get_pixmap().writePNG('test.png')
                 png = page.get_pixmap().getPNGData()
                 png = np.frombuffer(png, dtype=np.int8)
-                self.parse_img(png, result_dir, 'page-{}-'.format(str(page.number + 1)), page_number)
+                self.parse_img(png, result_dir,
+                               file_prefix='page-{}-'.format(str(page.number + 1)),
+                               board_title_fmt="Страница {}, доска {{}} из {{}}".format(page.number + 1))
             except:
                 pass
             self.progress.append_progress(p_layer, 1)
@@ -198,7 +150,7 @@ class SelectPageRangeDialog(QtWidgets.QDialog):
         self.page_cnt = page_cnt
         self.page_range_widget = self.findChild(QtWidgets.QLineEdit, 'page_range')
 
-        pages_str = self.get_ending(page_cnt)
+        pages_str = translate_plural(page_cnt, 'страница', 'страницы', 'страниц')
         self.findChild(QtWidgets.QLabel, 'page_cnt').setText("Всего {} {}".format(page_cnt, pages_str))
 
     def get_range(self):
@@ -208,12 +160,3 @@ class SelectPageRangeDialog(QtWidgets.QDialog):
         except ValueError:
             page_range = PageRange("{}-{}".format(1, self.page_cnt))
         return page_range
-
-    def get_ending(self, number):
-        if number % 100 in [11, 12, 13, 14]:
-            return "страниц"
-        if number % 10 == 1:
-            return "страница"
-        if number % 10 in [2, 3, 4]:
-            return "страницы"
-        return "страниц"
