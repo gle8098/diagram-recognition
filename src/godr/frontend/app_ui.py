@@ -9,8 +9,10 @@ from PyQt5 import QtWidgets
 from PyQt5 import uic, QtCore
 from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette
 from PyQt5.QtWidgets import QFileDialog, QApplication
+from PyQt5.Qt import Qt
 
 from godr.frontend import miscellaneous
+from godr.frontend.miscellaneous import translate_plural
 from godr.frontend.recognition_worker import RecognitionWorker, SelectPageRangeDialog
 from godr.frontend.sgfpainter import SgfPainter
 
@@ -29,6 +31,8 @@ class MainWindow(QtWidgets.QMainWindow):
         # Boards preview
         self.paths = []
         self.images = []  # List of QPixmap
+        self.parent_files = []
+        self.board_indices = []
         self.current_index = -1
         self.n_boards = 0
 
@@ -53,6 +57,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.lock_open_sgf_button(True)
 
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_A:
+            self.previous_file()
+        if event.key() == Qt.Key_D:
+            self.next_file()
+
+    def wheelEvent(self, event):
+        if event.angleDelta().y() > 0:
+            self.next_file()
+        else:
+            self.previous_file()
+
     def resizeEvent(self, event):
         result = super(QtWidgets.QMainWindow, self).resizeEvent(event)
         self.redraw_preview_image()
@@ -62,7 +78,7 @@ class MainWindow(QtWidgets.QMainWindow):
         type_filter = "All supported formats (*.png *.jpg *.jpeg *.pdf)"
         dialog = QFileDialog()
         dialog.setFileMode(QFileDialog.ExistingFiles)
-        names, _ = dialog.getOpenFileNames(self, caption="Open files", directory=os.getcwd(), filter=type_filter)
+        names, _ = dialog.getOpenFileNames(self, caption="Выберите файлы для распознавания", filter=type_filter)
 
         self.set_selected_files(names)
 
@@ -88,14 +104,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def set_selected_files(self, files):
         self.selected_files = files
 
-        # todo: use Qt Linguist & its tr() function
         n = len(files)
-        if n % 10 == 1 and n % 100 != 11:
-            line = '{} файл выбран'
-        elif 2 <= n % 10 <= 4 and (n % 100 < 10 or n % 100 > 20):
-            line = '{} файла выбрано'
-        else:
-            line = '{} файлов выбрано'
+        line = translate_plural(n, '{} файл выбран', '{} файла выбрано', '{} файлов выбрано')
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
 
     def lock_recognize_button(self, state):
@@ -108,13 +118,25 @@ class MainWindow(QtWidgets.QMainWindow):
         line = 'Доска {} из {}'.format(self.current_index + 1, self.n_boards)
         self.findChild(QtWidgets.QLabel, "label_board_index").setText(line)
 
-    def accept_new_board(self, path, image):
+        current_path = self.paths[self.current_index]
+        if current_path != "":
+            file_name = os.path.basename(current_path)
+            self.findChild(QtWidgets.QLabel, "sgf_name").setText(file_name)
+        else:
+            self.findChild(QtWidgets.QLabel, "sgf_name").setText("Не удалось распознать доску")
+
+        self.findChild(QtWidgets.QLabel, "file_name").setText(self.parent_files[self.current_index])
+        self.findChild(QtWidgets.QLabel, "board_index").setText(self.board_indices[self.current_index])
+
+    def accept_new_board(self, path, image, parent_file, board_index):
         height, width, channel = image.shape
         bytes_per_line = 3 * width
         pixmap_img = QPixmap(QImage(bytes(image.data), width, height, bytes_per_line, QImage.Format_RGB888))
 
         self.paths.append(path)
         self.images.append(pixmap_img)
+        self.parent_files.append(parent_file)
+        self.board_indices.append(board_index)
         self.n_boards += 1
 
         index = self.current_index
