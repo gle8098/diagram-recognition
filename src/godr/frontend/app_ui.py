@@ -48,11 +48,6 @@ class MainWindow(QtWidgets.QMainWindow):
         qta_color = QColor(QPalette().color(QPalette.Normal, QPalette.WindowText))
         qta.set_defaults(color=qta_color)
 
-        # Load and set icon
-        icon_bytes = bytes(pkg_resources.resource_string('godr.frontend.ui', 'icon.svg'))
-        icon_pixmap = QtGui.QPixmap.fromImage(QtGui.QImage.fromData(icon_bytes))
-        self.setWindowIcon(QtGui.QIcon(icon_pixmap))
-
         self.sgfpainter = SgfPainter()
         self.findChild(QtWidgets.QFrame, "sgf_painter_frame").layout().addWidget(self.sgfpainter)
 
@@ -249,6 +244,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+
+    # Load and set icon
+    icon_bytes = bytes(pkg_resources.resource_string('godr.frontend.ui', 'icon.svg'))
+    icon_pixmap = QtGui.QPixmap.fromImage(QtGui.QImage.fromData(icon_bytes))
+    app.setWindowIcon(QtGui.QIcon(icon_pixmap))
+
     window = MainWindow()
     window.init_ui()
     window.show()

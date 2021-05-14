@@ -2,7 +2,7 @@ import os
 import sys
 
 import pkg_resources
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 from PyQt5 import uic
 from PyQt5.QtWidgets import QFileDialog, QApplication
 
@@ -16,6 +16,8 @@ class MergeSgfDialog(QtWidgets.QDialog):
         # Load Qt Designer form
         form_class, _ = uic.loadUiType(pkg_resources.resource_stream('godr.frontend.ui', "merge_sgf.ui"))
         form_class().setupUi(self)
+
+        self.setWindowFlags(self.windowFlags() & (~QtCore.Qt.WindowContextHelpButtonHint))
 
         self.files = []
         self.outdir = None
