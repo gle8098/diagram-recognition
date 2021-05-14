@@ -35,7 +35,7 @@ class MergeSgfDialog(QtWidgets.QDialog):
         self.files = names
         file_names = [os.path.basename(name) for name in names]
         self.line_files.setText(str(file_names).translate({39: None})[1:-1])
-        if names and not self.outdir:
+        if names:
             self.outdir = os.path.dirname(names[0])
             self.line_outdir.setText(self.outdir)
             self.result_name_prefix.setText("joined_" + os.path.basename(self.files[0])[:-4])
