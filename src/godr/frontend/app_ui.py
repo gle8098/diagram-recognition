@@ -5,7 +5,7 @@ import sys
 import pkg_resources
 import fitz
 import qtawesome as qta
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtGui
 from PyQt5 import uic, QtCore
 from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette
 from PyQt5.QtWidgets import QFileDialog, QApplication
@@ -46,6 +46,11 @@ class MainWindow(QtWidgets.QMainWindow):
         # Init QtAwesome color from selected theme
         qta_color = QColor(QPalette().color(QPalette.Normal, QPalette.WindowText))
         qta.set_defaults(color=qta_color)
+
+        # Load and set icon
+        icon_bytes = bytes(pkg_resources.resource_string('godr.frontend.ui', 'icon.svg'))
+        icon_pixmap = QtGui.QPixmap.fromImage(QtGui.QImage.fromData(icon_bytes))
+        self.setWindowIcon(QtGui.QIcon(icon_pixmap))
 
         self.sgfpainter = SgfPainter()
         self.findChild(QtWidgets.QFrame, "sgf_painter_frame").layout().addWidget(self.sgfpainter)
