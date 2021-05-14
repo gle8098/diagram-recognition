@@ -142,6 +142,7 @@ class RecognitionWorker(QThread):
 class SelectPageRangeDialog(QtWidgets.QDialog):
     def __init__(self, path_pdf, page_cnt, parent=None):
         super().__init__(parent=parent)
+        self.cancelled = False
 
         form_class, _ = uic.loadUiType(pkg_resources.resource_stream('godr.frontend.ui', "select_pages_pdf.ui"))
         form_class().setupUi(self)
@@ -152,6 +153,12 @@ class SelectPageRangeDialog(QtWidgets.QDialog):
 
         pages_str = translate_plural(page_cnt, 'страница', 'страницы', 'страниц')
         self.findChild(QtWidgets.QLabel, 'page_cnt').setText("Всего {} {}".format(page_cnt, pages_str))
+
+    def closeEvent(self, event):
+        self.cancelled = True
+
+    def is_cancelled(self):
+        return self.cancelled
 
     def get_range(self):
         text = self.page_range_widget.text()

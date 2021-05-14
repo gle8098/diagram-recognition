@@ -114,6 +114,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.lock_recognize_button(True)
 
         ranges = self.collect_ranges_for_files()
+        if not ranges:
+            self.lock_recognize_button(False)
+            return
 
         self.recognition_worker = RecognitionWorker(self.selected_files, ranges)
         self.recognition_worker.update_ui.connect(self.update_progress_bar)
@@ -224,6 +227,9 @@ class MainWindow(QtWidgets.QMainWindow):
             doc = fitz.Document(file)
             dlg = SelectPageRangeDialog(file, doc.page_count)
             dlg.exec_()
+            if dlg.is_cancelled():
+                return None
+
             ranges.append(dlg.get_range())
         return ranges
 
