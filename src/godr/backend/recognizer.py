@@ -85,7 +85,6 @@ class Recognizer:
             extra_size = round(min(w, h) * EXTRA_SIZE_COEFF)
             board_img = page_img_crop[max(y - extra_size, 0): min(y + h + extra_size, page_img.shape[0]),
                                       max(x - extra_size, 0): min(x + w + extra_size, page_img.shape[1])]
-            cv2.imwrite("bug.png", board_img)
             board_images.append(board_img)
         return board_images
 
