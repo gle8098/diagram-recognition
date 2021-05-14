@@ -112,10 +112,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def convert_to_sgf(self):
         if self.recognizing_status:
-            self.recognition_worker.exit(1)
-            print("Attempted to stop")
-            self.switch_recognition_status(False)
+            self.recognition_worker.stop()
+            # Worker will send 'done' signal which will indicate that it has finished
             return
+
         print('Files are {}'.format(self.selected_files))
         self.switch_recognition_status(True)
 
