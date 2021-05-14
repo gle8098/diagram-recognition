@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MainWindow</class>
- <widget class="QMainWindow" name="MainWindow">
+ <class>MergeSgfDialog</class>
+ <widget class="QDialog" name="MergeSgfDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -13,71 +13,66 @@
   <property name="windowTitle">
    <string>Объединение SGF файлов</string>
   </property>
-  <widget class="QWidget" name="centralwidget">
-   <layout class="QFormLayout" name="formLayout">
-    <property name="fieldGrowthPolicy">
-     <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-    </property>
-    <property name="rowWrapPolicy">
-     <enum>QFormLayout::DontWrapRows</enum>
-    </property>
-    <item row="0" column="0">
-     <widget class="QPushButton" name="select_files">
-      <property name="text">
-       <string>Выбрать файлы</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="1">
-     <widget class="QLineEdit" name="selected_files">
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="1">
-     <widget class="QLabel" name="status">
-      <property name="minimumSize">
-       <size>
-        <width>22</width>
-        <height>22</height>
-       </size>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="0">
-     <widget class="QPushButton" name="select_outdir">
-      <property name="text">
-       <string>Выходная папка</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QLineEdit" name="selected_outdir">
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0">
-     <widget class="QPushButton" name="merge">
-      <property name="text">
-       <string>Объединить</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
+  <layout class="QGridLayout" name="gridLayout">
+   <property name="sizeConstraint">
+    <enum>QLayout::SetDefaultConstraint</enum>
+   </property>
+   <item row="0" column="0">
+    <widget class="QPushButton" name="select_files">
+     <property name="text">
+      <string>Выбрать файлы</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QLineEdit" name="selected_files">
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QPushButton" name="select_outdir">
+     <property name="text">
+      <string>Выходная папка</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QLineEdit" name="selected_outdir">
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QPushButton" name="merge">
+     <property name="text">
+      <string>Объединить</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QLabel" name="status">
+     <property name="minimumSize">
+      <size>
+       <width>22</width>
+       <height>22</height>
+      </size>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections>
   <connection>
    <sender>select_files</sender>
    <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
+   <receiver>MergeSgfDialog</receiver>
    <slot>select_files()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -93,7 +88,7 @@
   <connection>
    <sender>merge</sender>
    <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
+   <receiver>MergeSgfDialog</receiver>
    <slot>merge()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -109,7 +104,7 @@
   <connection>
    <sender>select_outdir</sender>
    <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
+   <receiver>MergeSgfDialog</receiver>
    <slot>select_outdir()</slot>
    <hints>
     <hint type="sourcelabel">

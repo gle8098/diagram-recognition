@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QFileDialog, QApplication
 from godr.sgf_joiner import SGFJoiner
 
 
-class MainWindow(QtWidgets.QMainWindow):
+class MergeSgfDialog(QtWidgets.QDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -67,7 +67,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = MergeSgfDialog()
     window.show()
     app.exec_()
 

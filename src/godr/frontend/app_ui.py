@@ -11,9 +11,10 @@ from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette
 from PyQt5.QtWidgets import QFileDialog, QApplication
 from PyQt5.Qt import Qt
 
-from godr.frontend import miscellaneous
+from godr.frontend import miscellaneous, sgf_joiner_ui
 from godr.frontend.miscellaneous import translate_plural
 from godr.frontend.recognition_worker import RecognitionWorker, SelectPageRangeDialog
+from godr.frontend.sgf_joiner_ui import MergeSgfDialog
 from godr.frontend.sgfpainter import SgfPainter
 
 
@@ -56,6 +57,27 @@ class MainWindow(QtWidgets.QMainWindow):
         self.findChild(QtWidgets.QPushButton, "next_button").setIcon(qta.icon('fa5s.angle-double-right'))
 
         self.lock_open_sgf_button(True)
+
+    def on_menu_click(self, action):
+        if action.objectName() == "action_SGF":
+            window = MergeSgfDialog()
+            window.exec()
+        elif action.objectName() == "action_about":
+            dialog = QtWidgets.QMessageBox()
+            dialog.addButton(QtWidgets.QMessageBox.Ok)
+            dialog.setText("""
+            <h3>Распознавание диаграмм го</h3>
+            <div><a href="https://t.me">Чат поддержки в телеграмме.</a></div>
+            <h4>Авторы:</h4>
+            <ul>
+            <li>Владислав Вихров</li>
+            <li>Евгений Кузнецов</li>
+            <li>Глеб Степанов, <a href="https://vk.com/vlistov">ВК</a></li>
+            </ul>
+            <br>
+            """)
+            dialog.setWindowTitle('О программе')
+            dialog.exec()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_A:
