@@ -33,7 +33,8 @@ class MergeSgfDialog(QtWidgets.QDialog):
         names, _ = dialog.getOpenFileNames(self, caption="Выберите SGF", filter=type_filter)
 
         self.files = names
-        self.line_files.setText(str(names))
+        file_names = [os.path.basename(name) for name in names]
+        self.line_files.setText(str(file_names).translate({39: None})[1:-1])
         if names and not self.outdir:
             self.outdir = os.path.dirname(names[0])
             self.line_outdir.setText(self.outdir)
