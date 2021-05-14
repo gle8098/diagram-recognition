@@ -28,6 +28,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.selected_files = tuple()
         self.recognition_worker = None
+        self.recognizing_status = False
 
         # Boards preview
         self.paths = []
@@ -110,18 +111,23 @@ class MainWindow(QtWidgets.QMainWindow):
         self.set_selected_files(names)
 
     def convert_to_sgf(self):
+        if self.recognizing_status:
+            self.recognition_worker.exit(1)
+            print("Attempted to stop")
+            self.switch_recognition_status(False)
+            return
         print('Files are {}'.format(self.selected_files))
-        self.lock_recognize_button(True)
+        self.switch_recognition_status(True)
 
         ranges = self.collect_ranges_for_files()
         if not ranges:
-            self.lock_recognize_button(False)
+            self.switch_recognition_status(False)
             return
 
         self.recognition_worker = RecognitionWorker(self.selected_files, ranges)
         self.recognition_worker.update_ui.connect(self.update_progress_bar)
         self.recognition_worker.send_board.connect(self.accept_new_board)
-        self.recognition_worker.done.connect(lambda: self.lock_recognize_button(False))
+        self.recognition_worker.done.connect(lambda: self.switch_recognition_status(False))
         self.recognition_worker.start()
 
     def update_progress_bar(self, percent, output):
@@ -138,8 +144,15 @@ class MainWindow(QtWidgets.QMainWindow):
         line = translate_plural(n, '{} файл выбран', '{} файла выбрано', '{} файлов выбрано')
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
 
-    def lock_recognize_button(self, state):
-        self.findChild(QtWidgets.QPushButton, "recognize").setEnabled(not state)
+    def switch_recognition_status(self, state):
+        self.recognizing_status = state
+        button = self.findChild(QtWidgets.QPushButton, "recognize")
+        if state:
+            button.setText("Остановить распознавание")
+            # button.setEnabled(not state)
+        else:
+            button.setText("Распознать")
+            # button.setEnabled(not state)
 
     def lock_open_sgf_button(self, state):
         self.findChild(QtWidgets.QPushButton, "open_sgf").setEnabled(not state)
