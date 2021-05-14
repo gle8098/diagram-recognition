@@ -51,12 +51,18 @@ class MergeSgfDialog(QtWidgets.QDialog):
             self.show_message("Выберите выходную папку")
             return
 
+        prefix_text = self.findChild(QtWidgets.QLineEdit, "select_result_name").text()
+
         joiner = SGFJoiner()
         joiner.join_files(self.files)
         result = joiner.serialise()
 
         for s, c in result.items():
-            with open(os.path.join(self.outdir, "joined_{}x{}.sgf".format(s, s)), "wb") as fh:
+            if len(result.items()) > 1:
+                result_name = "{}_{}x{}.sgf".format(prefix_text, s, s)
+            else:
+                result_name = "{}.sgf".format(prefix_text)
+            with open(os.path.join(self.outdir, result_name), "wb") as fh:
                 fh.write(c)
 
         self.show_message("Готово. Записано {} SGF.".format(len(result)))
