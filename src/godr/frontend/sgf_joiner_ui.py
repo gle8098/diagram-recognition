@@ -7,7 +7,7 @@ from PyQt5 import uic
 from PyQt5.QtWidgets import QFileDialog, QApplication
 
 from godr.sgf_joiner import SGFJoiner
-
+from pathvalidate import ValidationError, validate_filename
 
 class MergeSgfDialog(QtWidgets.QDialog):
     def __init__(self, *args, **kwargs):
@@ -23,6 +23,7 @@ class MergeSgfDialog(QtWidgets.QDialog):
         self.outdir = None
         self.line_files = self.findChild(QtWidgets.QLineEdit, 'selected_files')
         self.line_outdir = self.findChild(QtWidgets.QLineEdit, 'selected_outdir')
+        self.result_name_prefix = self.findChild(QtWidgets.QLineEdit, "select_result_name")
         self.status = self.findChild(QtWidgets.QLabel, 'status')
 
     def select_files(self):
@@ -36,6 +37,7 @@ class MergeSgfDialog(QtWidgets.QDialog):
         if names and not self.outdir:
             self.outdir = os.path.dirname(names[0])
             self.line_outdir.setText(self.outdir)
+            self.result_name_prefix.setText("joined_" + os.path.basename(self.files[0])[:-4])
 
     def select_outdir(self):
         dialog = QFileDialog()
@@ -53,7 +55,13 @@ class MergeSgfDialog(QtWidgets.QDialog):
             self.show_message("Выберите выходную папку")
             return
 
-        prefix_text = self.findChild(QtWidgets.QLineEdit, "select_result_name").text()
+        result_name_prefix_text = self.result_name_prefix.text()
+        try:
+            validate_filename(result_name_prefix_text)
+        except ValidationError as e:
+            self.show_message("Выберите корректное имя файла")
+            # print(f"{e}\n", file=sys.stderr)
+            return
 
         joiner = SGFJoiner()
         joiner.join_files(self.files)
@@ -61,9 +69,9 @@ class MergeSgfDialog(QtWidgets.QDialog):
 
         for s, c in result.items():
             if len(result.items()) > 1:
-                result_name = "{}_{}x{}.sgf".format(prefix_text, s, s)
+                result_name = "{}_{}x{}.sgf".format(result_name_prefix_text, s, s)
             else:
-                result_name = "{}.sgf".format(prefix_text)
+                result_name = "{}.sgf".format(result_name_prefix_text)
             with open(os.path.join(self.outdir, result_name), "wb") as fh:
                 fh.write(c)
 
