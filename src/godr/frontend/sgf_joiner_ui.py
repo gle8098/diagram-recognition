@@ -5,9 +5,11 @@ import pkg_resources
 from PyQt5 import QtWidgets, QtCore
 from PyQt5 import uic
 from PyQt5.QtWidgets import QFileDialog, QApplication
+from godr.frontend.warning_ui import WarningDialog
 
 from godr.sgf_joiner import SGFJoiner
 from pathvalidate import ValidationError, validate_filename
+
 
 class MergeSgfDialog(QtWidgets.QDialog):
     def __init__(self, *args, **kwargs):
@@ -67,6 +69,19 @@ class MergeSgfDialog(QtWidgets.QDialog):
         joiner = SGFJoiner()
         joiner.join_files(self.files)
         result = joiner.serialise()
+
+        # check if sgf with selected name already exists
+        for s, c in result.items():
+            if len(result.items()) > 1:
+                result_name = "{}_{}x{}.sgf".format(result_name_prefix_text, s, s)
+            else:
+                result_name = "{}.sgf".format(result_name_prefix_text)
+            if os.path.exists(os.path.join(self.outdir, result_name)):
+                window = WarningDialog(result_name)
+                window.exec()
+                if not window.get_rewrite_status():
+                    self.show_message("Выберите уникальное имя файла")
+                    return
 
         for s, c in result.items():
             if len(result.items()) > 1:
