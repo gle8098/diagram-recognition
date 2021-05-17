@@ -12,7 +12,7 @@ import cv2
 class GodrTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'godr test')
+        cls.dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'godr_test')
         cls.img_files = [os.path.join(cls.dir, f) for f in ['page_1.png']]
 
     def read_sgf(cls, path: str):
@@ -40,7 +40,6 @@ class GodrTestCase(unittest.TestCase):
         self.assertSetEqual(black_stones_local_coordinates, black_stones_local_coordinates_0)
         self.assertEqual(x_size, x_size_0)
         self.assertEqual(y_size, y_size_0)
-        print("First board test passed successfully!")
 
 
 if __name__ == '__main__':
