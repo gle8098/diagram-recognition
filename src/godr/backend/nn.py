@@ -20,18 +20,19 @@ class StoneRecognizer():
         img = np.expand_dims(img, axis=[0, 1])
         return img
 
-    def recognize(self, img_gray, cell_size, intersections):
+    def recognize(self, board_img, cell_size, intersections):
         CELL_SIZE_COEFF = 0.6
 
         delta = int(cell_size * CELL_SIZE_COEFF)
         white_stones = []
         black_stones = []
+
         for i in range(intersections.shape[0]):
             for j in range(intersections.shape[1]):
-                y = intersections[i][j][0]
-                x = intersections[i][j][1]
-                point_img = img_gray[max(x - delta, 0): min(x + delta, img_gray.shape[0]),
-                                     max(y - delta, 0): min(y + delta, img_gray.shape[1])]
+                y = intersections[i][j][0] + cell_size
+                x = intersections[i][j][1] + cell_size
+                point_img = board_img[max(x - delta, 0): min(x + delta, board_img.shape[0]),
+                                      max(y - delta, 0): min(y + delta, board_img.shape[1])]
                 data = self.transform(point_img)
                 input = {self.model.get_inputs()[0].name: data}
                 output = self.model.run(None, input)[0]
