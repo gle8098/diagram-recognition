@@ -29,8 +29,8 @@ class StoneRecognizer():
 
         for i in range(intersections.shape[0]):
             for j in range(intersections.shape[1]):
-                y = intersections[i][j][0] + cell_size
-                x = intersections[i][j][1] + cell_size
+                y = intersections[i][j][0]
+                x = intersections[i][j][1]
                 point_img = board_img[max(x - delta, 0): min(x + delta, board_img.shape[0]),
                                       max(y - delta, 0): min(y + delta, board_img.shape[1])]
                 data = self.transform(point_img)
