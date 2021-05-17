@@ -5,15 +5,16 @@ import sys
 import pkg_resources
 import fitz
 import qtawesome as qta
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtGui
 from PyQt5 import uic, QtCore
 from PyQt5.QtGui import QPixmap, QImage, QColor, QPalette
 from PyQt5.QtWidgets import QFileDialog, QApplication
 from PyQt5.Qt import Qt
 
-from godr.frontend import miscellaneous
+from godr.frontend import miscellaneous, sgf_joiner_ui
 from godr.frontend.miscellaneous import translate_plural
 from godr.frontend.recognition_worker import RecognitionWorker, SelectPageRangeDialog
+from godr.frontend.sgf_joiner_ui import MergeSgfDialog
 from godr.frontend.sgfpainter import SgfPainter
 
 
@@ -27,6 +28,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.selected_files = tuple()
         self.recognition_worker = None
+        self.recognizing_status = False
 
         # Boards preview
         self.paths = []
@@ -57,6 +59,27 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.lock_open_sgf_button(True)
 
+    def on_menu_click(self, action):
+        if action.objectName() == "action_SGF":
+            window = MergeSgfDialog()
+            window.exec()
+        elif action.objectName() == "action_about":
+            dialog = QtWidgets.QMessageBox()
+            dialog.addButton(QtWidgets.QMessageBox.Ok)
+            dialog.setText("""
+            <h3>Распознавание диаграмм го</h3>
+            <div><a href="https://t.me">Чат поддержки в телеграмме.</a></div>
+            <h4>Авторы:</h4>
+            <ul>
+            <li>Владислав Вихров</li>
+            <li>Евгений Кузнецов</li>
+            <li>Глеб Степанов, <a href="https://vk.com/vlistov">ВК</a></li>
+            </ul>
+            <br>
+            """)
+            dialog.setWindowTitle('О программе')
+            dialog.exec()
+
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_A:
             self.previous_file()
@@ -83,15 +106,23 @@ class MainWindow(QtWidgets.QMainWindow):
         self.set_selected_files(names)
 
     def convert_to_sgf(self):
+        if self.recognizing_status:
+            self.recognition_worker.stop()
+            # Worker will send 'done' signal which will indicate that it has finished
+            return
+
         print('Files are {}'.format(self.selected_files))
-        self.lock_recognize_button(True)
+        self.switch_recognition_status(True)
 
         ranges = self.collect_ranges_for_files()
+        if not ranges:
+            self.switch_recognition_status(False)
+            return
 
         self.recognition_worker = RecognitionWorker(self.selected_files, ranges)
         self.recognition_worker.update_ui.connect(self.update_progress_bar)
         self.recognition_worker.send_board.connect(self.accept_new_board)
-        self.recognition_worker.done.connect(lambda: self.lock_recognize_button(False))
+        self.recognition_worker.done.connect(lambda: self.switch_recognition_status(False))
         self.recognition_worker.start()
 
     def update_progress_bar(self, percent, output):
@@ -108,8 +139,15 @@ class MainWindow(QtWidgets.QMainWindow):
         line = translate_plural(n, '{} файл выбран', '{} файла выбрано', '{} файлов выбрано')
         self.findChild(QtWidgets.QLabel, "label_files_selected").setText(line.format(n))
 
-    def lock_recognize_button(self, state):
-        self.findChild(QtWidgets.QPushButton, "recognize").setEnabled(not state)
+    def switch_recognition_status(self, state):
+        self.recognizing_status = state
+        button = self.findChild(QtWidgets.QPushButton, "recognize")
+        if state:
+            button.setText("Остановить распознавание")
+            # button.setEnabled(not state)
+        else:
+            button.setText("Распознать")
+            # button.setEnabled(not state)
 
     def lock_open_sgf_button(self, state):
         self.findChild(QtWidgets.QPushButton, "open_sgf").setEnabled(not state)
@@ -197,12 +235,21 @@ class MainWindow(QtWidgets.QMainWindow):
             doc = fitz.Document(file)
             dlg = SelectPageRangeDialog(file, doc.page_count)
             dlg.exec_()
+            if dlg.is_cancelled():
+                return None
+
             ranges.append(dlg.get_range())
         return ranges
 
 
 def main():
     app = QApplication(sys.argv)
+
+    # Load and set icon
+    icon_bytes = bytes(pkg_resources.resource_string('godr.frontend.ui', 'icon.svg'))
+    icon_pixmap = QtGui.QPixmap.fromImage(QtGui.QImage.fromData(icon_bytes))
+    app.setWindowIcon(QtGui.QIcon(icon_pixmap))
+
     window = MainWindow()
     window.init_ui()
     window.show()

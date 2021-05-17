@@ -17,6 +17,7 @@ setup(name='godr',
           'QtAwesome',
           'PyMuPDF',
           'pagerange',
+          'pathvalidate',
           'onnxruntime'
       ],
       entry_points={
