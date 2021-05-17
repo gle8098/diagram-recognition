@@ -127,7 +127,9 @@ class RecognitionWorker(QThread):
 
             try:
                 # page.get_pixmap().writePNG('test.png')
-                png = page.get_pixmap().getPNGData()
+                scale = 1.25
+                scale_matrix = fitz.Matrix(scale, scale)  # get image 'scale' times larger than page.bound()
+                png = page.get_pixmap(matrix=scale_matrix).getPNGData()
                 png = np.frombuffer(png, dtype=np.int8)
                 self.parse_img(png, result_dir,
                                file_prefix='page-{}-'.format(str(page.number + 1)),
