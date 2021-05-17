@@ -68,7 +68,7 @@ class MainWindow(QtWidgets.QMainWindow):
             dialog.addButton(QtWidgets.QMessageBox.Ok)
             dialog.setText("""
             <h3>Распознавание диаграмм го</h3>
-            <div><a href="https://t.me">Чат поддержки в телеграмме.</a></div>
+            <div><a href="https://t.me/joinchat/8_VND7cWrKNmOWQ6">Чат поддержки в телеграмме.</a></div>
             <h4>Авторы:</h4>
             <ul>
             <li>Владислав Вихров</li>
