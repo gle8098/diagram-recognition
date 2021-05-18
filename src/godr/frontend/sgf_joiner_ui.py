@@ -4,10 +4,11 @@ import sys
 import pkg_resources
 from PyQt5 import QtWidgets, QtCore
 from PyQt5 import uic
-from PyQt5.QtWidgets import QFileDialog, QApplication
+from PyQt5.QtWidgets import QFileDialog, QApplication, QMessageBox
 
 from godr.sgf_joiner import SGFJoiner
 from pathvalidate import ValidationError, validate_filename
+
 
 class MergeSgfDialog(QtWidgets.QDialog):
     def __init__(self, *args, **kwargs):
@@ -61,18 +62,34 @@ class MergeSgfDialog(QtWidgets.QDialog):
             validate_filename(result_name_prefix_text)
         except ValidationError as e:
             self.show_message("Выберите корректное имя файла")
-            # print(f"{e}\n", file=sys.stderr)
             return
 
         joiner = SGFJoiner()
         joiner.join_files(self.files)
         result = joiner.serialise()
 
+        def get_result_filename(size):
+            if len(result.items()) == 1:
+                return "{}.sgf".format(result_name_prefix_text)
+            return "{}_{}x{}.sgf".format(result_name_prefix_text, size, size)
+
+        # check if sgf with selected name already exists
         for s, c in result.items():
-            if len(result.items()) > 1:
-                result_name = "{}_{}x{}.sgf".format(result_name_prefix_text, s, s)
-            else:
-                result_name = "{}.sgf".format(result_name_prefix_text)
+            result_name = get_result_filename(s)
+            if os.path.exists(os.path.join(self.outdir, result_name)):
+                text = "Файл {} уже существует. Хотите его перезаписать?".format(result_name)
+                dlg = QMessageBox(QMessageBox.Warning, "Файл уже существует",
+                                  text, QMessageBox.Yes | QMessageBox.No)
+                dlg.button(QMessageBox.Yes).setText("Да")
+                dlg.button(QMessageBox.No).setText("Нет, выбрать другое имя файла")
+                ret = dlg.exec()
+
+                if ret != QMessageBox.Yes:
+                    self.show_message("Выберите уникальное имя файла")
+                    return
+
+        for s, c in result.items():
+            result_name = get_result_filename(s)
             with open(os.path.join(self.outdir, result_name), "wb") as fh:
                 fh.write(c)
 
