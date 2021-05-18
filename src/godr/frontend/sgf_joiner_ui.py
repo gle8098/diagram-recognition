@@ -4,8 +4,7 @@ import sys
 import pkg_resources
 from PyQt5 import QtWidgets, QtCore
 from PyQt5 import uic
-from PyQt5.QtWidgets import QFileDialog, QApplication
-from godr.frontend.warning_ui import WarningDialog
+from PyQt5.QtWidgets import QFileDialog, QApplication, QMessageBox
 
 from godr.sgf_joiner import SGFJoiner
 from pathvalidate import ValidationError, validate_filename
@@ -76,18 +75,17 @@ class MergeSgfDialog(QtWidgets.QDialog):
                 result_name = "{}_{}x{}.sgf".format(result_name_prefix_text, s, s)
             else:
                 result_name = "{}.sgf".format(result_name_prefix_text)
+
             if os.path.exists(os.path.join(self.outdir, result_name)):
-                window = WarningDialog(result_name)
-                window.exec()
-                if not window.get_rewrite_status():
+                text = "Файл {} уже существует. Хотите его перезаписать?".format(result_name)
+                dlg = QMessageBox(QMessageBox.Warning, "Файл уже существует",
+                                  text, QMessageBox.Yes | QMessageBox.No)
+                ret = dlg.exec()
+
+                if ret != QMessageBox.Yes:
                     self.show_message("Выберите уникальное имя файла")
                     return
 
-        for s, c in result.items():
-            if len(result.items()) > 1:
-                result_name = "{}_{}x{}.sgf".format(result_name_prefix_text, s, s)
-            else:
-                result_name = "{}.sgf".format(result_name_prefix_text)
             with open(os.path.join(self.outdir, result_name), "wb") as fh:
                 fh.write(c)
 
