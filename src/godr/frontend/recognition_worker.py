@@ -34,11 +34,15 @@ class RecognitionWorker(QThread):
         self.files = files
         self.ranges = ranges
         self.progress = Progress((0, len(files)))
+        self.should_stop = False
 
     def send_update(self, line):
         """ Notifies MainWindow to update progress bar and append line to the log """
         percent = self.progress.calc()
         self.update_ui.emit(percent, line)
+
+    def stop(self):
+        self.should_stop = True
 
     def run(self):
         if not self.files:
@@ -62,14 +66,16 @@ class RecognitionWorker(QThread):
 
             try:
                 if extension == '.pdf':
-                    self.parse_pdf(img_file, result_dir, range=dlg_range)
+                    self.__parse_pdf(img_file, result_dir, range=dlg_range)
                 else:
                     with open(img_file, "rb") as f:
                         chunk = f.read()
                         img_bytes = np.frombuffer(chunk, dtype=np.uint8)
-                        self.parse_img(img_bytes, result_dir)
+                        self.__parse_img(img_bytes, result_dir)
                 output = "File processed"
 
+            except KeyboardInterrupt:
+                break
             except Exception as ex:
                 output = 'An error occurred <<{}>>'.format(str(ex))
 
@@ -78,7 +84,7 @@ class RecognitionWorker(QThread):
 
         self.done.emit()
 
-    def parse_img(self, img_bytes, path_dir, **kwargs):
+    def __parse_img(self, img_bytes, path_dir, **kwargs):
         file_prefix = kwargs.get("file_prefix", "")
         board_title_fmt = kwargs.get("board_title_fmt", "Доска {} из {}")
 
@@ -111,12 +117,15 @@ class RecognitionWorker(QThread):
                 self.progress.set_progress(p_layer, i + 1)
                 self.send_update('> An error occurred while processing board {}. <<{}>>'.format(i, str(e)))
 
+            if self.should_stop:
+                raise KeyboardInterrupt
+
             i += 1
 
         self.progress.pop_layer(p_layer)
         return paths, boards_img
 
-    def parse_pdf(self, path, result_dir, **kwargs):
+    def __parse_pdf(self, path, result_dir, **kwargs):
         doc = fitz.Document(path)
         pages = kwargs['range'].pages
         p_layer = self.progress.add_layer((0, len(pages)))
@@ -127,11 +136,15 @@ class RecognitionWorker(QThread):
 
             try:
                 # page.get_pixmap().writePNG('test.png')
-                png = page.get_pixmap().getPNGData()
+                scale = 1.25
+                scale_matrix = fitz.Matrix(scale, scale)  # get image 'scale' times larger than page.bound()
+                png = page.get_pixmap(matrix=scale_matrix).getPNGData()
                 png = np.frombuffer(png, dtype=np.int8)
-                self.parse_img(png, result_dir,
-                               file_prefix='page-{}-'.format(str(page.number + 1)),
-                               board_title_fmt="Страница {}, доска {{}} из {{}}".format(page.number + 1))
+                self.__parse_img(png, result_dir, file_prefix='page-{}-'.format(str(page.number + 1)),
+                                 board_title_fmt="Страница {}, доска {{}} из {{}}".format(page.number + 1))
+
+            except KeyboardInterrupt:
+                raise
             except:
                 pass
             self.progress.append_progress(p_layer, 1)
@@ -142,6 +155,7 @@ class RecognitionWorker(QThread):
 class SelectPageRangeDialog(QtWidgets.QDialog):
     def __init__(self, path_pdf, page_cnt, parent=None):
         super().__init__(parent=parent)
+        self.cancelled = False
 
         form_class, _ = uic.loadUiType(pkg_resources.resource_stream('godr.frontend.ui', "select_pages_pdf.ui"))
         form_class().setupUi(self)
@@ -152,6 +166,12 @@ class SelectPageRangeDialog(QtWidgets.QDialog):
 
         pages_str = translate_plural(page_cnt, 'страница', 'страницы', 'страниц')
         self.findChild(QtWidgets.QLabel, 'page_cnt').setText("Всего {} {}".format(page_cnt, pages_str))
+
+    def closeEvent(self, event):
+        self.cancelled = True
+
+    def is_cancelled(self):
+        return self.cancelled
 
     def get_range(self):
         text = self.page_range_widget.text()

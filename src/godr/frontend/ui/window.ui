@@ -279,6 +279,34 @@
    </layout>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1014</width>
+     <height>29</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu">
+    <property name="title">
+     <string>Дополнительно</string>
+    </property>
+    <addaction name="action_SGF"/>
+    <addaction name="action_about"/>
+   </widget>
+   <addaction name="menu"/>
+  </widget>
+  <action name="action_SGF">
+   <property name="text">
+    <string>Слияние SGF файлов</string>
+   </property>
+  </action>
+  <action name="action_about">
+   <property name="text">
+    <string>О программе</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections>
@@ -289,8 +317,8 @@
    <slot>select_files()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>136</x>
-     <y>23</y>
+     <x>140</x>
+     <y>56</y>
     </hint>
     <hint type="destinationlabel">
      <x>400</x>
@@ -305,8 +333,8 @@
    <slot>convert_to_sgf()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>136</x>
-     <y>46</y>
+     <x>140</x>
+     <y>89</y>
     </hint>
     <hint type="destinationlabel">
      <x>529</x>
@@ -321,8 +349,8 @@
    <slot>next_file()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>672</x>
-     <y>396</y>
+     <x>737</x>
+     <y>534</y>
     </hint>
     <hint type="destinationlabel">
      <x>762</x>
@@ -337,8 +365,8 @@
    <slot>previous_file()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>516</x>
-     <y>396</y>
+     <x>598</x>
+     <y>534</y>
     </hint>
     <hint type="destinationlabel">
      <x>552</x>
@@ -353,12 +381,28 @@
    <slot>open_current_sgf()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>324</x>
-     <y>426</y>
+     <x>379</x>
+     <y>562</y>
     </hint>
     <hint type="destinationlabel">
      <x>644</x>
      <y>488</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>menuBar</sender>
+   <signal>triggered(QAction*)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>on_menu_click(QAction*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>968</x>
+     <y>18</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>268</x>
+     <y>528</y>
     </hint>
    </hints>
   </connection>
@@ -370,5 +414,6 @@
   <slot>next_file()</slot>
   <slot>previous_file()</slot>
   <slot>open_current_sgf()</slot>
+  <slot>on_menu_click(QAction*)</slot>
  </slots>
 </ui>

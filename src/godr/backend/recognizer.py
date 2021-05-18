@@ -39,6 +39,7 @@ class Recognizer:
         cell_size = self.get_cell_size(v_lines, h_lines)
 
         board_img_nn = self.transform_for_nn(aligned_board_img, cell_size)
+        intersections += cell_size
         white_stones, black_stones = self.nn_stone_recognizer.recognize(board_img_nn, cell_size, intersections)
 
         if len(white_stones) == 0 and len(black_stones) == 0:
@@ -62,8 +63,8 @@ class Recognizer:
         edges = self.canny_edges(page_img_crop)
 
         # For better connectivity
-        morph_kernel_size = round(size * MORPH_COEFF)
-        edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, np.ones((morph_kernel_size, morph_kernel_size)))
+        kernel_size = round(size * MORPH_COEFF)
+        edges = cv2.dilate(edges, np.ones((kernel_size, kernel_size)))
 
         # Find contours
         contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -281,11 +282,11 @@ class Recognizer:
         dists = np.concatenate([dists_x, dists_y])
         cell_size = np.mean(dists[np.round(dists / cell_size) == 1])
 
-        # Calculate length of unclear lines
-        x_min = np.amin(clear_h_lines[:, 0])
-        x_max = np.amax(clear_h_lines[:, 2])
-        y_min = np.amin(clear_v_lines[:, 1])
-        y_max = np.amax(clear_v_lines[:, 3])
+        # Calculate min/max coords and start/end of unclear lines
+        x_min, start_x = np.min(clear_h_lines[:, 0]), np.max(clear_h_lines[:, 0]),
+        x_max, end_x = np.max(clear_h_lines[:, 2]), np.min(clear_h_lines[:, 2])
+        y_min, start_y = np.min(clear_v_lines[:, 1]), np.max(clear_v_lines[:, 1])
+        y_max, end_y = np.max(clear_v_lines[:, 3]), np.min(clear_v_lines[:, 3])
 
         def add_unclear_lines(clear_lines, is_vertical, min_coord, max_coord, start, end):
             ind = 0 if is_vertical else 1
@@ -309,8 +310,8 @@ class Recognizer:
                     lines.append(clear_lines[i - 1])
             return np.array(lines).astype(int)
 
-        v_lines = add_unclear_lines(clear_v_lines, True, x_min, x_max, y_min, y_max)
-        h_lines = add_unclear_lines(clear_h_lines, False, y_min, y_max, x_min, x_max)
+        v_lines = add_unclear_lines(clear_v_lines, True, x_min, x_max, start_y, end_y)
+        h_lines = add_unclear_lines(clear_h_lines, False, y_min, y_max, start_x, end_x)
         return v_lines, h_lines
 
     def get_cell_size(self, v_lines, h_lines):
