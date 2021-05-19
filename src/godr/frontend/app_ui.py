@@ -169,7 +169,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def accept_new_board(self, path, image, parent_file, board_index):
         height, width, channel = image.shape
         bytes_per_line = 3 * width
-        pixmap_img = QPixmap(QImage(bytes(image.data), width, height, bytes_per_line, QImage.Format_RGB888))
+        pixmap_img = QPixmap(QImage(bytes(image.data), width, height, bytes_per_line, QImage.Format_BGR888))
 
         self.paths.append(path)
         self.images.append(pixmap_img)
