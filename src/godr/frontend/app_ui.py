@@ -1,4 +1,5 @@
 import glob
+import logging
 import os
 import sys
 
@@ -111,7 +112,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # Worker will send 'done' signal which will indicate that it has finished
             return
 
-        print('Files are {}'.format(self.selected_files))
+        logging.info('Files are {}'.format(self.selected_files))
         self.switch_recognition_status(True)
 
         ranges = self.collect_ranges_for_files()
@@ -130,7 +131,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if output:
             self.findChild(QtWidgets.QPlainTextEdit, "console_output").appendPlainText(output)
-            print(output)
+            logging.info(output)
 
     def set_selected_files(self, files):
         self.selected_files = files
@@ -223,7 +224,7 @@ class MainWindow(QtWidgets.QMainWindow):
             try:
                 miscellaneous.open_file_in_external_app(filename)
             except Exception as ex:
-                print("Could not open file \"{}\" because <<{}>>".format(filename, str(ex)))
+                logging.error("Could not open file \"{}\" because <<{}>>".format(filename, str(ex)))
 
     def collect_ranges_for_files(self):
         ranges = []
