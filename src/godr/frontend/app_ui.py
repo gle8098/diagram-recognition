@@ -1,4 +1,5 @@
 import glob
+import logging
 import os
 import sys
 
@@ -68,7 +69,7 @@ class MainWindow(QtWidgets.QMainWindow):
             dialog.addButton(QtWidgets.QMessageBox.Ok)
             dialog.setText("""
             <h3>Распознавание диаграмм го</h3>
-            <div><a href="https://t.me/joinchat/8_VND7cWrKNmOWQ6">Чат поддержки в телеграмме.</a></div>
+            <div><a href="https://t.me/joinchat/8_VND7cWrKNmOWQ6">Чат поддержки в телеграме.</a></div>
             <h4>Авторы:</h4>
             <ul>
             <li>Владислав Вихров</li>
@@ -111,7 +112,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # Worker will send 'done' signal which will indicate that it has finished
             return
 
-        print('Files are {}'.format(self.selected_files))
+        logging.info('Files are {}'.format(self.selected_files))
         self.switch_recognition_status(True)
 
         ranges = self.collect_ranges_for_files()
@@ -130,7 +131,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if output:
             self.findChild(QtWidgets.QPlainTextEdit, "console_output").appendPlainText(output)
-            print(output)
+            logging.info(output)
 
     def set_selected_files(self, files):
         self.selected_files = files
@@ -169,7 +170,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def accept_new_board(self, path, image, parent_file, board_index):
         height, width, channel = image.shape
         bytes_per_line = 3 * width
-        pixmap_img = QPixmap(QImage(bytes(image.data), width, height, bytes_per_line, QImage.Format_RGB888))
+        pixmap_img = QPixmap(QImage(bytes(image.data), width, height, bytes_per_line, QImage.Format_BGR888))
 
         self.paths.append(path)
         self.images.append(pixmap_img)
@@ -223,7 +224,7 @@ class MainWindow(QtWidgets.QMainWindow):
             try:
                 miscellaneous.open_file_in_external_app(filename)
             except Exception as ex:
-                print("Could not open file \"{}\" because <<{}>>".format(filename, str(ex)))
+                logging.error("Could not open file \"{}\" because <<{}>>".format(filename, str(ex)))
 
     def collect_ranges_for_files(self):
         ranges = []

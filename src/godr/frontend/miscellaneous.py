@@ -1,3 +1,4 @@
+import logging
 import os
 import platform
 import subprocess
@@ -53,7 +54,8 @@ class Progress:
             self.add_layer(init_range)
 
     def __warn(self, msg):
-        print('WARN RecognitionWorker.Progress: {}'.format(msg))
+        # todo: get logger by class name?
+        logging.warning('RecognitionWorker.Progress: {}'.format(msg))
 
     def add_layer(self, prange):
         assert len(prange) == 2 and prange[0] <= prange[1]

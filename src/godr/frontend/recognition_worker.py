@@ -1,3 +1,4 @@
+import logging
 import os
 
 import cv2
@@ -50,7 +51,7 @@ class RecognitionWorker(QThread):
             self.done.emit()
             return
 
-        print('Recognising {} files'.format(len(self.files)))
+        logging.info('Recognising {} files'.format(len(self.files)))
 
         for img_file, dlg_range in zip(self.files, self.ranges):
             result_dir, extension = os.path.splitext(img_file)
