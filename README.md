@@ -10,17 +10,17 @@
 
 ## Установка:
 
-Версии можно скачать со [страницы загрузки](http://confluence.prac.atp-fivt.org:8080/display/GODR/Releases). Для подробностей по сборке см. [deploy](deploy/readme.md).
+Версии можно скачать со [страницы загрузки](docs/releases.md). Для подробностей по сборке см. [deploy](docs/deploy.md).
 
 Также приложение можно установить через pip командой ниже
 ```bash
 pip install .
 ```
-
+<details>
+<summary>Для разработчиков</summary>
 Если вы разработчик, его следует установить в editable режиме (желательно в виртуальной среде):
+
 ```bash
 pip install -e .
 ```
-
-[Чат поддержки в telegram](https://t.me/joinchat/8_VND7cWrKNmOWQ6)
-
+</details>
