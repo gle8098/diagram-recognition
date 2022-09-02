@@ -12,7 +12,7 @@ setup(name='godr',
       install_requires=[
           'opencv-python-headless~=4.5.3',
           'sgfmill==1.1.1',
-          'pyqt5==5.15.4',
+          'pyqt5==5.15.3',
           'numpy',
           'QtAwesome',
           'PyMuPDF==1.20.2',

@@ -57,5 +57,5 @@ coll = COLLECT(exe,
 app = BUNDLE(coll,
              name='godr.app',
              icon=icon_name,
-             bundle_identifier=None,
+             bundle_identifier='gle8098.godr',
              info_plist={'CFBundleName': 'Распознавание го диаграм'})
