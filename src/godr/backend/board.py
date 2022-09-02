@@ -70,10 +70,14 @@ class Board:
             # board_size = max(x_size + left_gap + right_gap, y_size + up_gap + down_gap)
             if not left_edge:
                 left_edge_size = board_size - x_size
+                if not right_edge:
+                    left_edge_size //= 2
             else:
                 left_edge_size = 0
             if not up_edge:
                 up_edge_size = board_size - y_size
+                if not down_edge:
+                    up_edge_size //= 2
             else:
                 up_edge_size = 0
         return [board_size, up_edge_size, left_edge_size]
