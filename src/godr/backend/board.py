@@ -23,8 +23,9 @@ class Board:
         down_edge = edges[1]
         left_edge = edges[2]
         right_edge = edges[3]
+        board_size = 19
         if up_edge and down_edge:
-            board_size = y_size
+            # board_size = y_size
             up_edge_size = 0
             # down_edge_size = 0
             if left_edge:
@@ -45,7 +46,7 @@ class Board:
                 # Incorrect board, shouldn't ever happen
                 raise Exception
         elif left_edge and right_edge:
-            board_size = x_size
+            # board_size = x_size
             left_edge_size = 0
             # right_edge_size = 0
             if up_edge:
@@ -66,13 +67,17 @@ class Board:
             down_gap = edge_gap * int(not down_edge)
             left_gap = edge_gap * int(not left_edge)
             right_gap = edge_gap * int(not right_edge)
-            board_size = max(x_size + left_gap + right_gap, y_size + up_gap + down_gap)
+            # board_size = max(x_size + left_gap + right_gap, y_size + up_gap + down_gap)
             if not left_edge:
                 left_edge_size = board_size - x_size
+                if not right_edge:
+                    left_edge_size //= 2
             else:
                 left_edge_size = 0
             if not up_edge:
                 up_edge_size = board_size - y_size
+                if not down_edge:
+                    up_edge_size //= 2
             else:
                 up_edge_size = 0
         return [board_size, up_edge_size, left_edge_size]

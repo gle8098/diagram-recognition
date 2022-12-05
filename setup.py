@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 # Note that this version may be untrue
 setup(name='godr',
-      version='1.0',
+      version='1.1',
       packages=find_packages(where='src'),
       package_data={
           'godr.frontend.ui': ['*'],
@@ -10,15 +10,15 @@ setup(name='godr',
       package_dir={'': 'src'},
       python_requires='>3.6',
       install_requires=[
-          'opencv-python-headless',
-          'sgfmill',
-          'pyqt5',
+          'opencv-python-headless~=4.5.3',
+          'sgfmill==1.1.1',
+          'pyqt5==5.15.3',
           'numpy',
           'QtAwesome',
-          'PyMuPDF',
+          'PyMuPDF==1.20.2',
           'pagerange',
           'pathvalidate',
-          'onnxruntime'
+          'onnxruntime==1.12.1'
       ],
       entry_points={
           'console_scripts': [

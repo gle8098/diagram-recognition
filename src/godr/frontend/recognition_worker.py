@@ -136,18 +136,18 @@ class RecognitionWorker(QThread):
             self.send_update('Rendering {}-th page of PDF'.format(str(page.number + 1)))
 
             try:
-                # page.get_pixmap().writePNG('test.png')
-                scale = 1.25
+                # page.get_pixmap().save('test.png')
+                scale = 1.3
                 scale_matrix = fitz.Matrix(scale, scale)  # get image 'scale' times larger than page.bound()
-                png = page.get_pixmap(matrix=scale_matrix).getPNGData()
+                png = page.get_pixmap(matrix=scale_matrix).tobytes()
                 png = np.frombuffer(png, dtype=np.int8)
                 self.__parse_img(png, result_dir, file_prefix='page-{}-'.format(str(page.number + 1)),
                                  board_title_fmt="Страница {}, доска {{}} из {{}}".format(page.number + 1))
-
             except KeyboardInterrupt:
                 raise
-            except:
-                pass
+            except Exception as e:
+                self.send_update('> An error occurred while processing page {}. <<{}>>'.format(page_number, str(e)))
+
             self.progress.append_progress(p_layer, 1)
 
         self.progress.pop_layer(p_layer)
