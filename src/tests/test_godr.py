@@ -12,8 +12,8 @@ import cv2
 class GodrTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'godr_test')
-        cls.img_files = [os.path.join(cls.dir, f) for f in ['page_1.png']]
+        cls.dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'tests')
+        cls.img_files = [os.path.join(cls.dir, f) for f in ['6.png']]
 
     def read_sgf(cls, path: str):
         with open(path) as fh:
@@ -29,9 +29,8 @@ class GodrTestCase(unittest.TestCase):
         boards_img = rec.split_into_boards(img)
         white_stones_local_coordinates, black_stones_local_coordinates, x_size, y_size, edges = \
             rec.recognize(boards_img[0])
-        white_stones_local_coordinates_0 = {(5, 8), (6, 6), (7, 6), (8, 6), (8, 8), (9, 7)}
-        black_stones_local_coordinates_0 = {(2, 8), (4, 7), (4, 8), (5, 5), (5, 6), (6, 5), (7, 5), (8, 5), (9, 5),
-                                            (9, 6)}
+        white_stones_local_coordinates_0 = {(7, 4), (8, 4), (6, 5), (5, 8), (8, 7), (6, 8), (6, 4), (7, 9), (6, 7), (6, 6), (9, 4)}
+        black_stones_local_coordinates_0 = {(8, 8), (7, 7), (9, 5), (6, 9), (8, 5), (7, 8)}
         x_size_0 = 10
         y_size_0 = 10
         white_stones_local_coordinates = set(white_stones_local_coordinates)
