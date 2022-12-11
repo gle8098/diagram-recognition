@@ -26,4 +26,10 @@ jobs:
         python -m pip install .
     - name: Test with pytest
       run: |
-        pytest
+        pytest --color=yes | tee /tmp/pytest.log
+    - name: Archive pytest logs
+      uses: actions/upload-artifact@v3
+      with:
+        name: pytest-logs
+        path: |
+          /tmp/pytest.log
